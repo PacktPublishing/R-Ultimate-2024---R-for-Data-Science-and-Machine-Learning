@@ -1,0 +1,183 @@
+---
+title: "kmeans Clustering Solution"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(stats))
+library(factoextra)
+```
+
+# Introduction
+
+We will work on a dataset on Pulsar candidates. This data was collected during "High Time Resolution Universe Survey (South)".
+
+Some candidates were later confirmed Pulsars, the other could not be confirmed. This is supervised learning. Assume we don't know the true values, because this is the purpose of clustering - to find relationships that were not known before.
+
+Here we will use the "true" values to assess how well our clustering works.
+
+# Data Understanding
+
+Data and description of data is found [here](https://archive.ics.uci.edu/ml/datasets/HTRU2).
+
+HTRU2 is a data set which describes a sample of pulsar candidates collected during the High Time Resolution Universe Survey (South) [1]. 
+
+Pulsars are a rare type of Neutron star that produce radio emission detectable here on Earth. They are of considerable scientific interest as probes of space-time, the inter-stellar medium, and states of matter (see [2] for more uses). 
+
+As pulsars rotate, their emission beam sweeps across the sky, and when this crosses our line of sight, produces a detectable pattern of broadband radio emission. As pulsars 
+rotate rapidly, this pattern repeats periodically. Thus pulsar search involves looking for periodic radio signals with large radio telescopes. 
+
+Each pulsar produces a slightly different emission pattern, which varies slightly with each rotation (see [2] for an introduction to pulsar astrophysics to find out why). Thus a potential signal detection known as a 'candidate', is averaged over many rotations of the pulsar, as determined by the length of an observation. In the absence of additional info, each candidate could potentially describe a real pulsar. However in practice almost all detections are caused by radio frequency interference (RFI) and noise, making legitimate signals hard to find. 
+
+Machine learning tools are now being used to automatically label pulsar candidates to facilitate rapid analysis. Classification systems in particular are being widely adopted, 
+(see [4,5,6,7,8,9]) which treat the candidate data sets as binary classification problems. Here the legitimate pulsar examples are a minority positive class, and spurious examples the majority negative class. At present multi-class labels are unavailable, given the costs associated with data annotation. 
+
+Our attributes are:
+
+1. Mean of the integrated profile. 
+
+2. Standard deviation of the integrated profile. 
+
+3. Excess kurtosis of the integrated profile. 
+
+4. Skewness of the integrated profile. 
+
+5. Mean of the DM-SNR curve. 
+
+6. Standard deviation of the DM-SNR curve. 
+
+7. Excess kurtosis of the DM-SNR curve. 
+
+8. Skewness of the DM-SNR curve. 
+
+9. Class (target variable)
+
+# Data Preparation
+
+## Data Download
+
+First we download the data.
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/HTRU2.zip"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00372/HTRU2.zip"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+# unzip the file
+unzip(zipfile = file_path, exdir = "./data")
+
+
+```
+
+## Data Import
+
+The data is imported and assigned to a dataframe, called "df_raw". 1000 observations are sampled.
+
+```{r}
+set.seed(123)
+file_name <- "./data/HTRU_2.csv"
+df_raw <- read.csv(file = file_name, header = F) %>% 
+  dplyr::sample_n(1000)
+```
+
+The right column names are assigned.
+
+These names are used:
+
+"Profile_mean", "Profile_stdev", "Profile_skewness", "Profile_kurtosis", "DM_mean", "DM_stdev", "DM_skewness", "DM_kurtosis", "class"
+
+```{r}
+colnames_to_set <- c("Profile_mean", "Profile_stdev", "Profile_skewness", "Profile_kurtosis", "DM_mean", "DM_stdev", "DM_skewness", "DM_kurtosis", "class")
+colnames(df_raw) <- colnames_to_set
+```
+
+## Data Understanding
+
+1. Find out if there are NA to be handled!
+
+```{r}
+# code comes here
+```
+
+There are no NA's that need to be handled.
+
+2. How many legitimate pulsars (class 1) and how many spurious results (class 0) are there?
+
+```{r}
+# code comes here
+```
+
+There are 1000 samples which are spurious.
+
+## Data Manipulation
+
+In clustering a distance is measured. Due to this, it is important to apply scaling to the data.
+
+3. Create a new object called "df_scaled", which drops column "class" and scales the data.
+
+```{r}
+# code comes here
+```
+
+# Model
+
+In this chapter you will create a clustering model and evaluate it afterwards.
+
+## Model Creation
+
+4. Please create a clustering model based on kmeans-algorithm. With kmeans you need to assign how many clusters should be defined. Please select a reasonable number of clusters.
+
+```{r}
+# code comes here
+```
+
+x specifies the data. k specifies the number of clusters.
+
+## Visualisation
+
+5. Create a plot that shows the actual class and the cluster.
+
+```{r}
+# code comes here
+```
+
+```{r}
+# code comes here
+```
+
+```{r}
+# code comes here
+```
+
+6. Create a table that shows the count for actual class and cluster.
+
+```{r}
+# code comes here
+```
+
+
+
+
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Dr Robert Lyon, University of Manchester, School of Physics and Astronomy, Alan Turing Building, Manchester M13 9PL, United Kingdom, robert.lyon '@' manchester.ac.uk

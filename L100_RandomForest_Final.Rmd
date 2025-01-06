@@ -1,0 +1,265 @@
+---
+title: "Random Forest"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)  # for data manipulation
+library(randomForest)  # for random forest model creation
+library(RRF)  # Regularized Random Forests
+
+library(keras)  # for multiassignment operation
+library(caret)  # for model performance
+library(reshape2)
+source("./functions/train_val_test.R")
+```
+
+
+# Business Understanding
+
+We will create a Credit Approval model. More information can be found at this [link](http://archive.ics.uci.edu/ml/datasets/credit+approval).
+
+We will predict whether an applicant received a credit card.
+
+# Data Understanding
+
+```{r}
+set.seed(123)
+credit_approval <- readRDS("./data/CreditApproval.RDS")
+```
+
+The dataset has `r nrow(df)` observations and `r ncol(df)-1` attributes, plus one class attribute. The class attribute   
+
+# Data Preparation
+
+In tutorial on missing data handling, this dataset was prepared and missing data was taken care of.
+
+```{r}
+credit_approval %>% summary()
+```
+
+The class attribute has values "-" and "+" which will be transformed to 0 and 1.
+
+```{r}
+credit_approval <- credit_approval %>% 
+  dplyr::mutate(Approved = ifelse(Approved == "+", 1, 0)) %>%
+  dplyr::mutate(Income = log(Income))
+
+credit_approval$Income[is.infinite(credit_approval$Income)] <- 0
+
+```
+
+We check that we have the same distribution as before.
+
+```{r}
+credit_approval$Approved %>% table()
+```
+
+We change type of "Approved" to factor.
+```{r}
+credit_approval$Approved <- as.factor(credit_approval$Approved)
+```
+
+
+## Train / Validation Split
+
+For simplicity we will only split into training and validation
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = credit_approval, train_ratio = 0.8, val_ratio = 0.2, test_ratio = 0)
+```
+
+
+# Modeling
+
+```{r}
+model_rf <- randomForest(data = train, 
+                         Approved ~ ., 
+                         importance = T  # required to get Mean Decrease Accuracy and Mean Decrease Gini
+                         )
+model_rf
+```
+
+# Predictions
+
+```{r}
+val$Approved_pred <- predict(model_rf, val)
+```
+
+# Model Performance
+
+## Confusion Matrix
+
+```{r}
+conf_mat <- table(predicted = val$Approved_pred, actual = val$Approved)
+conf_mat
+```
+
+```{r}
+caret::confusionMatrix(conf_mat)
+```
+
+Here you can see many important model performance metrics on one glance.
+
+Accuracy is 84 %, which is quite good.
+
+## Feature Importance
+
+```{r}
+plot_feature_importance <- function(model) {
+  feat_importance <- model %>% 
+    randomForest::importance()
+  feat_importance <- tibble(feature = rownames(feat_importance),
+                          MeanDecrAccuary = feat_importance[, 3],
+                          MeanDecrGini = feat_importance[, 4]) %>% 
+  gather(key = "method", value = "MeanDecrease", 2:3)
+  g <- ggplot(feat_importance, aes(x = feature,
+                                 y = MeanDecrease,
+                                 fill = method))
+  g <- g + geom_col(position = "dodge")
+  g <- g + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  g
+}
+```
+
+```{r}
+plot_feature_importance(model_rf)
+```
+
+Prior default has the highest importance of all features.
+
+A simple graph can also be plotted directly with *varImpPlot()* function.
+
+```{r}
+randomForest::varImpPlot(model_rf)
+```
+
+What is the Gini importance measure? It measures the average improvement of purity by splits for any given variable. The result is misleading for variables with many categories. We will have an excursion on this at the end of this session.
+
+# Model Parameter Tuning
+
+RandomForests have some hyperparameters that can be 
+
+```{r}
+ntree_range <- seq(10,200, 10)
+ntree_res <- tibble(range = ntree_range,
+                    accuracy = NA)
+for (ntree in ntree_range) {
+  # Create the model with hypertuning parameter
+  model_rf <- randomForest(data = train, Approved ~ ., ntree = ntree)
+
+  # create predictions on validation dataset
+  val$Approved_pred <- predict(model_rf, val)
+
+  # create confusion matrix
+  conf_mat <- table(predicted = val$Approved_pred, actual = val$Approved)
+
+  # derive metrics from confusion matrix
+  acc <- caret::confusionMatrix(conf_mat)$overall[1]
+  ntree_res$accuracy[which(ntree_range == ntree)] <- acc
+}
+
+g <- ggplot(ntree_res, aes(range, accuracy))
+g <- g + geom_line()
+g
+```
+
+```{r}
+mtry_range <- seq(2,10, 1)
+mtry_res <- tibble(range = mtry_range,
+                    accuracy = NA)
+for (mtry in mtry_range) {
+  # Create the model with hypertuning parameter
+  model_rf <- randomForest(data = train, 
+                           Approved ~ ., 
+                           ntree = 100, 
+                           mtry = mtry)
+
+  # create predictions on validation dataset
+  val$Approved_pred <- predict(model_rf, val)
+
+  # create confusion matrix
+  conf_mat <- table(predicted = val$Approved_pred, actual = val$Approved)
+
+  # derive metrics from confusion matrix
+  acc <- caret::confusionMatrix(conf_mat)$overall[1]
+  mtry_res$accuracy[which(mtry_range == mtry)] <- acc
+}
+
+g <- ggplot(mtry_res, aes(range, accuracy))
+g <- g + geom_line()
+g
+
+```
+
+# Excursion: Bias towards Features with many categories
+
+Random Forest has a problem with variables that have many features. To show this, we will add a completely useless variable with 20 different categories, create a model, and check feature importance.
+
+```{r}
+n_categories <- 20
+train$useless_var <- sample(x = 1:n_categories, 
+                            size = nrow(train), 
+                            replace = T) %>% 
+  as.factor
+
+table(train$useless_var)
+```
+
+Now we create a new model.
+
+```{r}
+model_rf_bias_categories <- randomForest(data = train, 
+                                         Approved ~ .,
+                                         importance = T  # parameter required to get both plots
+                                         )
+model_rf_bias_categories
+
+plot_feature_importance(model_rf_bias_categories)
+```
+
+Our useless variable has no predictive quality, the accuracy decreases, but it is assumed to be second most relevant parameter (according to Gini)!
+
+Play with it and run it, e.g. with 40 categories.
+
+```{r}
+feat_importance <- randomForest::importance(model_rf_bias_categories, type = 2)
+feat_importance
+```
+
+# Excursion: Handling of correlated variables
+
+It might be that there are highly-correlated variables in the dataset. So they are redundant and one might be left out.
+
+```{r}
+model_rf_regularized <- RRF::RRF(data = train, 
+                                 Approved ~ .,
+                                 importance = T  # parameter required to get both plots
+                                         )
+feat_importance <- model_rf_regularized$importance
+feat_importance <- tibble(feature = rownames(feat_importance),
+                          MeanDecrAccuary = feat_importance[, 3],
+                          MeanDecrGini = feat_importance[, 4]) %>% 
+  gather(key = "method", value = "MeanDecrease", 2:3)
+
+g <- ggplot(feat_importance, aes(x = feature,
+                                 y = MeanDecrease,
+                                 fill = method))
+g <- g + geom_col(position = "dodge")
+g <- g + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g
+```
+
+If you compare this plot to our "original" random forest, you will see that certain parameters have a lower impact. This is due to the fact, that their parameters are regularized.
+
+

@@ -1,0 +1,95 @@
+---
+title: "Basic Data Types"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc:true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Vector Creation
+
+You can create a vector with c(). The values inside define the type of the vector.
+
+Double variables:
+
+```{r}
+double_variables <- c(2, 3.4, 0, 7.8)
+```
+
+Integer variables:
+
+```{r}
+integer_variables <- c(2L, 4L, 15L)
+```
+
+Boolean variables:
+
+```{r}
+logical_variables <- c(TRUE, FALSE, F, T)
+```
+
+character variables:
+
+```{r}
+char_variables <- c("4", "test", 5)
+```
+
+
+# Types
+
+You can check the type with typeof().
+
+```{r}
+typeof(double_variables)
+```
+
+If you want for a specific type with is.character(), is.double(), is.numeric().
+
+```{r}
+is.double(double_variables)
+is.double(integer_variables)
+```
+
+is.numeric() returns true for double and integer vectors.
+
+# Type Coercion
+
+All elements of an atomic vector must have the same type. If you combine elements of different types they are coerced to the most flexible type.
+
+```{r}
+typeof(c(1L, 2L, 3))
+```
+This combination of integer and double values results in a double vector.
+
+Logical vectors can be coerced to numeric (0 for false, 1 for true).
+
+```{r}
+as.numeric(logical_variables)
+```
+
+This is very helpful if you want to use it for filtering or aggregating.
+
+There is an order of coercion:
+
+logical --> integer --> numeric --> complex --> character --> list
+
+This means you can coerce from left to right. But if you coerce from right to left you possibly lose some information.
+
+```{r}
+as.logical(as.integer(double_variables))
+```
+
+All values that are different from zero are coerced to TRUE.
+
+```{r}
+as.numeric(char_variables)
+```
+Due to the coercion NAs are introduced where the conversion to numeric did not produce a valid result.
+

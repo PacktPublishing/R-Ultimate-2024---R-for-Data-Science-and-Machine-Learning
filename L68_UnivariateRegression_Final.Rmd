@@ -1,0 +1,132 @@
+---
+title: "Univariate Linear Regression"
+author: "Bert Gollnick"
+date: "November 23, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+We will work with a dataset, that is provided by **dplyr** package. Based on star wars characters we will predict person weight based on its height.
+
+What is independent and dependent variable? Well, the height is more or less defined in our genes, but our weight can be influenced. So I use height as independent variable ad mass as dependent variable.
+
+## Packages
+
+We load required packages.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+## Data Import
+
+We load the data.
+
+```{r}
+data("starwars")
+set.seed(123)
+```
+
+## Visualisation
+
+We write a small function for visualising the data.
+
+```{r}
+plot_height_mass <- function(df) {
+  g <- ggplot(df, aes(x = height, y = mass))
+  g <- g + geom_point()
+  g <- g + geom_smooth(method="lm", se=F)
+  g
+}
+
+plot_height_mass(starwars)
+```
+
+# Data Preparation
+
+There is a clear outlier we need to handle.
+
+```{r}
+starwars %>% 
+  filter(mass > 1000) %>% 
+  select (name, height, mass)
+```
+
+
+```{r}
+starwars_filt <- starwars %>% 
+  filter (mass < 1000)
+
+plot_height_mass(starwars_filt)
+```
+
+# Modeling
+
+Model is created with *lm()*.
+
+```{r}
+model <- lm(data = starwars_filt, 
+            formula = mass ~ height)
+```
+
+We take a look at the summary.
+
+```{r}
+model_summary <- model %>% 
+  summary()
+model_summary
+```
+
+R**2 is calculated.
+
+```{r}
+model_summary$r.squared
+```
+
+# Predictions
+
+```{r}
+starwars_filt$mass_predictions <- predict(object = model, 
+                       newdata = starwars_filt)
+```
+
+```{r}
+g <- plot_height_mass(starwars_filt)
+g <- g + geom_point(data = starwars_filt, 
+                    aes(x = height, 
+                        y = mass_predictions),
+                    col = "red", alpha = .3)
+g
+```
+
+We see that our predictions exactly match the smoothed line from ggplot.
+
+But how good do they match our actual data.
+
+```{r}
+g <- ggplot(data = starwars_filt,
+            aes(x = mass,
+                y = mass_predictions,
+                label = name)
+            )
+g <- g + geom_point()
+g <- g + geom_text(size = 3)
+g <- g + geom_abline(slope = 1, 
+                     intercept = 0,
+                     col = "blue")
+g <- g + labs(x = "Actual Mass [lb]",
+              y = "Predicted Mass [lb]",
+              title = "Mass Correlation")
+g
+```

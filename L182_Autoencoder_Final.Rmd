@@ -1,0 +1,145 @@
+---
+title: "Autoencoders"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(tidyverse)
+library(keras)
+library(plotly)
+
+source("./functions/train_val_test.R")
+```
+
+# Business Objective
+
+We want to reduce a 3D representation of an object (a volcano) into 2D. We do this because the idea is easy to understand. This is what we are doing every time looking at a TV screen. 
+
+# Data Understanding
+
+We will work on topographic information on Auckland's Maunga Whau volcano. The dataset is shipped with R and you can load it with **data()**.
+
+```{r}
+data("volcano")
+```
+
+Let's take a look at the volcano in 3D.
+
+```{r}
+plot_ly(z=volcano, type="surface")
+```
+
+# Data Preparation
+
+We have the data in wide-format, but for further processing we need to convert it to tidy-format. Furthermore, it is a matrix format and we want data transform it to a dataframe.
+
+```{r}
+volcano_df <- volcano %>% 
+  as.data.frame() %>%  # transform to dataframe
+  mutate(y = 1:dim(volcano)[1]) %>%  # create new colum y from count of rows
+  gather(key = "x", value = "z", 1:61) %>%  # reshape data from wide to tidy
+  mutate (x = gsub(pattern = "V", replacement = "", x = x)) %>%  # column X is currently character and includes V1, V2, ... we need to remove "V"...
+  mutate(x = as.numeric(x))  # ... and cast it to numeric
+```
+
+# Train / Test Split
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = volcano_df, 
+                                              train_ratio = 0.6, 
+                                              val_ratio = 0.2, 
+                                              test_ratio = 0.2)
+```
+
+# Modeling
+
+## Data Matrix Creation
+
+```{r}
+train_mat <- train %>% 
+  as.matrix()
+val_mat <- val %>% 
+  as.matrix()
+test_mat <- test %>% 
+  as.matrix()
+```
+
+## Encoder and Decoder Layer Setup
+
+```{r}
+input_layer <- layer_input(shape = c(3))
+
+n1 <- 2
+n2 <- n1
+n3 <- 3
+
+encoder <- 
+  input_layer %>% 
+  layer_dense(units = n1, activation = "linear")  # dimensions of final encoding layer
+
+decoder <- encoder %>% 
+  layer_dense(units = n2, activation = "linear") %>% 
+  layer_dense(units = n3, activation = "linear")  # dimension of original variable
+```
+
+## Compilation and Training
+
+```{r}
+ae_model <- keras_model(inputs = input_layer, outputs = decoder)
+
+ae_model %>% 
+  compile(loss = "mean_absolute_error",
+          optimizer = "adam",
+          metrics = c("mean_squared_error"))
+
+summary(ae_model)
+```
+
+Now we train the model.
+
+```{r}
+history <- ae_model %>% 
+  keras::fit(train_mat,
+             train_mat,
+             epochs = 20,
+             shuffle = T,
+             validation_data = list(val_mat, val_mat))
+
+plot(history)
+```
+
+# Results
+
+Use encoder model and predict reduced dimensions.
+
+```{r}
+save_model_weights_hdf5(ae_model, filepath = "./models/ae_weights.hdf5")
+
+encoder_model <- keras_model(inputs = input_layer, outputs = encoder)
+encoder_model %>% load_model_weights_hdf5(filepath = "./models/ae_weights.hdf5", 
+                                          skip_mismatch = T, 
+                                          by_name = T)
+
+reduced_predictions <- encoder_model %>% 
+  predict(test_mat) %>% 
+  as_tibble()
+```
+
+```{r}
+ggplot(reduced_predictions, aes(x = V1, y = V2)) + 
+  geom_point() + 
+  theme_bw()
+```
+

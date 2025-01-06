@@ -1,0 +1,186 @@
+---
+title: "Logistic Regression"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+We will work on spam emails.
+
+More details from UCI ML repository:
+
+The "spam" concept is diverse: advertisements for products/web sites, make money fast schemes, chain letters, pornography... 
+
+Our collection of spam e-mails came from our postmaster and individuals who had filed spam. Our collection of non-spam e-mails came from filed work and personal e-mails, and hence the word 'george' and the area code '650' are indicators of non-spam. These are useful when constructing a personalized spam filter. One would either have to blind such non-spam indicators or get a very wide collection of non-spam to generate a general purpose spam filter. 
+
+# Data Preparation
+
+## Packages
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(keras))
+suppressPackageStartupMessages(library(caret))
+
+source("./functions/train_val_test.R")
+```
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/spam.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+spam <- read.csv(file_path, sep = ",", header = F)
+```
+
+
+## Column Names
+
+We need to set column names correctly.
+
+```{r}
+colnames(spam) <- c("word_freq_make","word_freq_address","word_freq_all","word_freq_3d","word_freq_our","word_freq_over","word_freq_remove","word_freq_internet","word_freq_order","word_freq_mail","word_freq_receive","word_freq_will","word_freq_people","word_freq_report","word_freq_addresses","word_freq_free","word_freq_business","word_freq_email","word_freq_you","word_freq_credit","word_freq_your","word_freq_font","word_freq_000","word_freq_money","word_freq_hp","word_freq_hpl","word_freq_george","word_freq_650","word_freq_lab","word_freq_labs","word_freq_telnet","word_freq_857","word_freq_data","word_freq_415","word_freq_85","word_freq_technology","word_freq_1999","word_freq_parts","word_freq_pm","word_freq_direct","word_freq_cs","word_freq_meeting","word_freq_original","word_freq_project","word_freq_re","word_freq_edu","word_freq_table","word_freq_conference","char_freq_;","char_freq_(","char_freq_[","char_freq_!","char_freq_$","char_freq_#","capital_run_length_average","capital_run_length_longest","capital_run_length_total", "target" 
+)
+```
+
+We check the summary of the data to see if there are missing values.
+
+```{r}
+summary(spam)
+```
+
+We might also check it with this line.
+
+```{r}
+spam[is.na(spam), ]
+```
+
+```{r}
+str(spam$target)
+spam$target <- as.factor(spam$target)
+```
+
+
+## Train / Validation / Test Split
+
+We split the data into train, validation, and test data.
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = spam)
+```
+
+
+# Modeling 
+
+```{r}
+model_logreg <- glm(formula = target ~ ., family = "binomial", data = train)
+```
+
+```{r}
+summary(model_logreg)
+```
+
+# Predictions
+
+With default settings we get log oods of predictions.
+
+```{r}
+val$target_pred_logreg <- predict(model_logreg, newdata = val)
+```
+
+But we are rather interested in probabilities.
+
+```{r}
+val$target_pred <- predict(model_logreg, newdata = val, type= "response")
+```
+
+Furthermore we are interested in classes.
+
+```{r}
+threshold <- 0.5
+val$target_pred_class <- ifelse(val$target_pred >threshold, 1, 0) %>% as.factor()
+```
+
+# Model Performance
+
+## Confusion Matrix
+
+Training Data confusion matrix:
+
+```{r}
+threshold <- 0.5
+
+train$target_pred <- predict(model_logreg, newdata = train, type= "response")
+train$target_pred_class <- ifelse(train$target_pred >threshold, 1, 0) %>% as.factor()
+
+conf_mat_train <- table(predicted = train$target_pred_class, actual = train$target)
+conf_mat_train
+
+```
+
+
+Validation Data confusion matrix:
+
+```{r}
+conf_mat_val <- table(predicted = val$target_pred_class, actual = val$target)
+conf_mat_val
+```
+
+## Naive Classifier
+
+Training:
+
+```{r}
+# Training
+tab_classes <- train$target %>% table()
+max(tab_classes) / sum(tab_classes)
+```
+
+Validation:
+
+```{r}
+# Validation
+tab_classes <- val$target %>% table()
+max(tab_classes) / sum(tab_classes)
+```
+
+
+## Performance Metrics
+
+
+```{r}
+caret::confusionMatrix(conf_mat_train)
+
+caret::confusionMatrix(conf_mat_val)
+```
+
+# Acknowledgement
+
+We thank the creators and authors of the dataset.
+
+Creators: 
+
+Mark Hopkins, Erik Reeber, George Forman, Jaap Suermondt 
+Hewlett-Packard Labs, 1501 Page Mill Rd., Palo Alto, CA 94304 
+
+Donor: 
+
+George Forman (gforman at nospam hpl.hp.com) 650-857-7835
+

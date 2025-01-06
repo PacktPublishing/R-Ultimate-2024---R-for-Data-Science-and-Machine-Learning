@@ -1,0 +1,52 @@
+---
+title: "Train / Validation / Test Split"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Preparation
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(caret))
+library(keras)
+```
+
+
+```{r}
+# add code here
+```
+
+## Train / Validation / Test Split
+
+We create our own code for splitting data into training, validation, and testing.
+
+```{r}
+# add code here
+```
+
+
+```{r}
+# add code here
+```
+
+# Function for Train / Validation / Test Split
+
+```{r}
+# add code here
+```
+
+We will use assignment operator from **keras** package.
+
+Now we have everything in place to perform the split.
+
+```{r}
+# add code here
+```
+
+# Modeling
+
+Now the modeling could start ...

@@ -1,0 +1,111 @@
+---
+title: "Functions: Fibonacci"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+We can create Fibonacci numbers manually. Now we want to create a function, that can be passed the number of elements and it will return Fibonacci numbers up to this number.
+
+# Calculation
+
+At first you should know how this series looks like and how it is calculated. The first six elements are
+
+1, 1, 2, 3, 5, 8, …
+
+Optional is the zero, that could be added at the beginning (we won’t). You might have realised already, that each number is the sum of its two predecessors. So you need to have two predecessors, which is why we define the first two elements. We define a variable name “fibonacci” and assign a vector to it. For this we use combine c() function. As parameters we pass the first two numbers: 1 and 1.
+
+```{r}
+# code here
+```
+
+What structure has this object? We find out with str().
+
+```{r}
+# code here
+```
+
+It is a numerical vector with two elements. You could define two variable, for the predecessor and pre-predecessor. We follow a different approach and use just one vector. What we need is the last element and the next to last element of this vector.
+
+The last element is the element, which index equals the length of the vector. The length of the vector can be determined with length().
+
+```{r}
+# code here
+```
+
+Accessing a specific element is done with square-brackets “[]”. We access the last element:
+
+```{r}
+# code here
+```
+
+The index of next to last element is length minus 1. We use this and access the next to last element:
+
+```{r}
+# code here
+```
+
+So the next element is always defined as this.
+
+```{r}
+# code here
+```
+
+How can we extend a vector? With append()! We just need to pass the existing vector, followed by the next element.
+
+```{r}
+# code here
+```
+
+We already have a working solution. But it can be more elegant. It also is a lot of effort, if you want to calculate, let’s say, the 50th element.
+
+We define the generation to be calculated with “elementnr”, and initialise the first two elements of “fibonacci”. Now we calculate for the third to the fiftieth element each additional element. If the number of iterations is known in advance you should use a _for() loop. The parameter are a control variable “i”, which is varied from 3 to “element_nr”. In each loop our code for appending the next element is applied.
+
+# Function Creation
+
+Functions follow a general structure.
+
+```{r}
+# code here
+```
+
+Here you can use the snippet "fun" to get the general structure. This is adapted so that we pass one argument "element_nr".
+
+```{r}
+# code here
+```
+
+
+
+```{r}
+# code here
+```
+
+What happens if we try to access the second element.
+
+```{r}
+# code here
+```
+
+It returns the first four elements, which is not correct, so we need some special treatment, if we want to access only the first or second element.
+
+```{r}
+# code here
+```
+
+Ok, this works now for 1 or 2 elements. What happens if a negative element number is passed? This is of course technically not feasible, but it would be good to avoid errors on unlogical inputs.
+
+Let's define that Fibonacci number is 0, if a negative or zero element number is passed.
+
+```{r}
+# code here
+```

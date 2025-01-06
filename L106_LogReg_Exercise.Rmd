@@ -1,0 +1,120 @@
+---
+title: "Logistic Regression Exercise"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+We will create a Credit Approval model. More information can be found at this [link](http://archive.ics.uci.edu/ml/datasets/credit+approval).
+
+We will predict whether an applicant received a credit.
+
+## Data Import
+
+Import the file to an object called "credit_approval".
+
+```{r}
+# put your code here
+```
+
+# Data Preparation
+
+## Packages
+
+We load required packages.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(keras))
+suppressPackageStartupMessages(library(caret))
+suppressPackageStartupMessages(library(e1071))
+
+source("./functions/train_val_test.R")
+```
+
+In tutorial on missing data handling, this dataset was prepared and missing data was taken care of.
+
+```{r}
+# put your code here
+```
+
+The class attribute has values "-" and "+" which will be transformed to 0 and 1.
+
+```{r}
+# put your code here
+```
+
+We check that we have the same distribution as before.
+
+```{r}
+# put your code here
+```
+
+We change type of "Approved" to factor.
+```{r}
+# put your code here
+```
+
+
+## Train / Validation Split
+
+For simplicity we will only split into training and validation
+
+```{r}
+# put your code here
+```
+
+
+# Modeling
+
+```{r}
+# put your code here
+```
+
+# Predictions
+
+Please calculate predictions for a threshold of 0.5 for training and validation dataset.
+
+```{r}
+# put your code here
+```
+
+# Model Performance
+
+## Baseline Performance 
+
+Please calculate the accuracy, if always the most frequent class is predicted!
+
+```{r}
+# put your code here
+```
+
+
+## Confusion Matrix
+
+Please calculate the confusion matrix for training and validation datset.
+
+```{r}
+# put your code here
+```
+
+```{r}
+# put your code here
+```
+
+
+# Acknowledgement
+
+We thank the provider of the dataset.
+
+(confidential source)
+
+Submitted by quinlan '@' cs.su.oz.au

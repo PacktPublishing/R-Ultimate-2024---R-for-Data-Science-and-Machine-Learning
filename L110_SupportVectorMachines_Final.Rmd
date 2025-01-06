@@ -1,0 +1,153 @@
+---
+title: "Support Vector Machines"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(keras)
+library(e1071)
+source("./functions/train_val_test.R")
+```
+
+# Data Preparation
+
+## Data Creation
+
+We create data on our own. 
+
+```{r}
+set.seed(123)
+df <- dplyr::tibble(x = runif(n = 2000, min = -10, max = 10),
+                              y = runif(n = 2000, min = -10, max = 10)) %>%
+  dplyr::mutate(z = x^2+y^2) %>% 
+      dplyr::mutate (class = ifelse(z < 50, "A", "B")) %>% 
+      dplyr::mutate(class = as.factor(class))
+
+```
+
+You can see a circle inside a rectangular grid. The circle points refer to class A, the outer area refers to class B. The task is to predict the classes correctly.
+
+## Train / Validation Split
+
+Data will be splitted for 80 % training, and 20 % validation.
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = df, train_ratio = 0.8, val_ratio = 0.2, test_ratio = 0)
+```
+
+## Visualisation
+
+The data is visualised. It has only two dimensions, but since SVM is able to reshape the data into some higher-order representation it will be able to predict the classes nearly perfectly.
+
+```{r}
+g <- ggplot(train, aes(x, y, col = class))
+g <- g + geom_point()
+g <- g + theme_bw()
+g
+```
+
+# Model
+
+We create a Support Vector Machines model.
+
+```{r}
+model_svm <- svm(data = train, 
+                 class ~ x + y, 
+                 kernel = "radial")
+model_svm
+```
+
+It can also be plotted with the base-plotting environment.
+
+```{r}
+plot(model_svm, train, y ~ x)
+```
+
+# Predictions
+
+The classes of validation data are predicted.
+
+```{r}
+train$class_pred <- predict(object = model_svm, 
+                          newdata = train)
+
+val$class_pred <- predict(object = model_svm, 
+                          newdata = val)
+```
+
+# Model Performance
+
+## Confusion Matrix
+
+A confusion matrix is created based on training and validation data.
+
+Training:
+
+```{r}
+conf_mat_train <- table(predicted = train$class_pred, actual = train$class)
+conf_mat_train
+```
+
+
+
+Validation:
+
+```{r}
+conf_mat_val <- table(predicted = val$class_pred, actual = val$class)
+conf_mat_val
+```
+
+```{r}
+caret::confusionMatrix(conf_mat_train)
+caret::confusionMatrix(conf_mat_val)
+```
+
+## Hyperparameter Tuning
+
+You can modify 
+
+- kernel
+
+- cost
+
+- gamma
+
+```{r}
+gamma <- 10^(-3:-1)
+cost = 10^(-2:1)
+tuned_parameters <- tune.svm(data = train, 
+                        class ~ x + y, 
+                        kernel = "radial", 
+                        gamma = gamma, 
+                        cost = cost)
+
+tuned_parameters$performances
+tuned_parameters$best.parameters
+model_svm <- svm(data = train, 
+                        class ~ x + y, 
+                        kernel = "radial", 
+                        gamma = tuned_parameters$best.parameters[1], 
+                        cost = tuned_parameters$best.parameters[2])
+
+# create predictions
+val$class_pred <- predict(object = model_svm, 
+                          newdata = val)
+
+# Confusion Matrix
+conf_mat <- table(predicted = val$class_pred, actual = val$class)
+caret::confusionMatrix(conf_mat_val)
+
+```
+

@@ -1,0 +1,85 @@
+---
+title: "Data Filtering"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Data Preparation
+
+## Load Data
+
+```{r}
+data("diamonds")
+```
+
+```{r}
+summary(diamonds)
+```
+
+## Filtering Rows
+
+You can filter for rows with **filter()**.
+
+You can use all comparison operators, e.g. ==, !=, <=, >=, ...
+
+You also can check for categories with %in%.
+
+```{r}
+diamonds[2, ]  # 2nd row
+diamonds[c(1,3), 'cut']  # 1st, 3rd row, column 'cut'
+
+diamonds_filt <- diamonds %>% 
+  filter (carat >= 3) %>% 
+  filter (cut %in% c("Ideal", "Premium"))
+```
+
+Other row-based filters are **sample_n()**
+
+```{r}
+diamonds_filt <- diamonds %>% 
+  sample_n(100)
+```
+
+or **slice()**.
+
+```{r}
+diamonds_filt <- diamonds %>% 
+  slice(10:20)
+```
+
+or **top_n()**.
+
+## Filtering Columns
+
+You can filter for columns with **select()**.
+
+There are two ways to approach this:
+
+1. White-List: define the columns that you want to keep
+
+2. Black-List: define the columns that you don't want to keep
+
+```{r}
+diamonds_filt <- diamonds %>% 
+  select(carat, cut)  # white-list
+
+diamonds_filt <- diamonds %>% 
+  select(-carat, -cut)  # black-list
+```
+

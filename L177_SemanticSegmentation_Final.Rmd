@@ -1,0 +1,383 @@
+---
+title: "Semantic Segmentation"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    code_folding: hide
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Packages
+
+```{r}
+# Data Manipulation
+library(dplyr)
+library(tidyr)
+library(abind)
+
+# Deep Learning
+library(keras)
+
+# Image Processing / Visualisation
+library(jpeg)
+library(OpenImageR)
+library(imager)
+library(ggplot2)
+library(tiff)
+```
+
+# Data Preparation
+
+## Data Import
+
+We extract the filenames for training and validation images.
+
+```{r}
+train_images <- list.files(path = "./data_raw/train/images/", 
+                             recursive = T)
+
+
+validation_files <- list.files(path = "./data_raw/test/images/", 
+                             recursive = T)
+```
+
+### Single File Handling
+
+We start with a single file:
+
+The first image is imported, rescaled, and has this shape.
+```{r}
+image_file <- paste0("./data_raw_SemanticSegmentation/train/images/", train_images[1])
+image_tif <- tiff::readTIFF(image_file)
+
+dim(image_tif)
+```
+
+We visualise the result.
+
+```{r}
+OpenImageR::imageShow(image_tif)
+```
+
+```{r}
+sample_image <- function(image_file) {
+  # samples of 512x512 are taken from raw and mask
+  # resized to 128x128
+  # returned as arrays
+  image_mask <- tiff::readTIFF(paste0("./data_raw_SemanticSegmentation/train/gt/", image_file))
+  image_raw <- tiff::readTIFF(paste0("./data_raw_SemanticSegmentation/train/images/", image_file))
+  
+  dims <- image_raw %>% dim
+  resolution <- 256
+  x <- runif(n = 1, 
+             min = 1, 
+             max = dims[1] - resolution)
+  y <- runif(n = 1, 
+             min = 1, 
+             max = dims[1] - resolution)
+  
+  sample_image_raw <- image_raw[x:(x+resolution-1), y:(y+resolution-1), ] %>% 
+    resizeImage(width = 128, height = 128)
+  sample_image_mask <- image_mask[x:(x+resolution-1), y:(y+resolution-1)] %>% 
+    resizeImage(width = 128, height = 128)
+  
+  list(sample_image_raw, sample_image_mask)
+}
+```
+
+Now we test the function.
+
+This image represents a sample raw-image.
+
+```{r}
+c(sample_raw, sample_mask) %<-% sample_image(train_images[1])
+OpenImageR::imageShow(sample_raw)
+```
+
+And here you have its corresponding mask image.
+
+```{r}
+OpenImageR::imageShow(sample_mask)
+```
+
+
+### Training Data Preparation
+
+Images for raw and mask are extracted with 128x128 size and returned as arrays.
+
+Now we put it into a loop and create our training data.
+
+```{r}
+data_preparation <- function(images, n_obs) {
+  # prepare the data arrays
+  X_train_raw <- array(NA, dim = c(n_obs, 128, 128, 3))
+  X_train_mask <- array(NA, dim = c(n_obs, 128, 128, 1))
+  
+  # populate the arrays
+  for (i in 1:n_obs) {
+    c(sample_raw, sample_mask) %<-% sample_image(images[i])
+    X_train_raw[i,,, ] <- sample_raw
+    X_train_mask[i,,, ] <- sample_mask
+    print(i)
+  }
+  list(X_train_raw, X_train_mask)
+}
+```
+
+```{r}
+# create training data by sampling images from the original data
+# c(X_train_raw_1, X_train_mask_1) %<-% data_preparation(images = train_images,
+#                                                    n_obs = 180)
+# c(X_train_raw_2, X_train_mask_2) %<-% data_preparation(images = train_images,
+#                                                    n_obs = 180)
+# c(X_train_raw_3, X_train_mask_3) %<-% data_preparation(images = train_images,
+#                                                    n_obs = 180)
+# c(X_train_raw_4, X_train_mask_4) %<-% data_preparation(images = train_images,
+#                                                    n_obs = 180)
+# c(X_train_raw_5, X_train_mask_5) %<-% data_preparation(images = train_images,
+#                                                    n_obs = 180)
+# 
+# X_train_raw <- X_train_raw_1 %>% 
+#   abind(X_train_raw_2, along = 1) %>% 
+#   abind(X_train_raw_3, along = 1) %>% 
+#   abind(X_train_raw_4, along = 1) %>% 
+#   abind(X_train_raw_5, along = 1)
+# 
+# dimnames(X_train_raw) <- NULL
+# 
+# X_train_mask <- X_train_mask_1 %>% 
+#   abind(X_train_mask_2, along = 1) %>% 
+#   abind(X_train_mask_3, along = 1) %>% 
+#   abind(X_train_mask_4, along = 1) %>% 
+#   abind(X_train_mask_5, along = 1)
+# 
+# dimnames(X_train_mask) <- NULL
+# 
+# 
+# rm(X_train_mask_1, X_train_mask_2, X_train_mask_3, X_train_mask_4, X_train_mask_5,
+#    X_train_raw_1, X_train_raw_2, X_train_raw_3, X_train_raw_4, X_train_raw_5)
+# save(X_train_mask, X_train_raw, file = "./data_processed/Train.RData")
+load("./data_processed/Train.RData")
+```
+
+# Modeling
+
+## Architecture
+
+```{r}
+# Loss function -----------------------------------------------------
+
+dice_coef <- function(y_true, y_pred, smooth = 1.0) {
+    y_true_f <- k_flatten(y_true)
+    y_pred_f <- k_flatten(y_pred)
+    intersection <- k_sum(y_true_f * y_pred_f)
+    result <- (2 * intersection + smooth) / 
+        (k_sum(y_true_f) + k_sum(y_pred_f) + smooth)
+    return(result)
+}
+
+bce_dice_loss <- function(y_true, y_pred) {
+    result <- loss_binary_crossentropy(y_true, y_pred) +
+        (1 - dice_coef(y_true, y_pred))
+    return(result)
+}
+
+
+# U-net 128 -----------------------------------------------------
+
+get_unet_128 <- function(input_shape = c(128, 128, 3),
+                         num_classes = 1) {
+    
+    inputs <- layer_input(shape = input_shape)
+    # 128
+    
+    down1 <- inputs %>%
+        layer_conv_2d(filters = 64, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 64, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") 
+    down1_pool <- down1 %>%
+        layer_max_pooling_2d(pool_size = c(2, 2), strides = c(2, 2))
+    # 64
+    
+    down2 <- down1_pool %>%
+        layer_conv_2d(filters = 128, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 128, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") 
+    down2_pool <- down2 %>%
+        layer_max_pooling_2d(pool_size = c(2, 2), strides = c(2, 2))
+    # 32
+    
+    down3 <- down2_pool %>%
+        layer_conv_2d(filters = 256, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 256, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") 
+    down3_pool <- down3 %>%
+        layer_max_pooling_2d(pool_size = c(2, 2), strides = c(2, 2))
+    # 16
+    
+    down4 <- down3_pool %>%
+        layer_conv_2d(filters = 512, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 512, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") 
+    down4_pool <- down4 %>%
+        layer_max_pooling_2d(pool_size = c(2, 2), strides = c(2, 2))
+    # 8
+    
+    center <- down4_pool %>%
+        layer_conv_2d(filters = 1024, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 1024, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") 
+    # center
+    
+    up4 <- center %>%
+        layer_upsampling_2d(size = c(2, 2)) %>%
+        {layer_concatenate(inputs = list(down4, .), axis = 3)} %>%
+        layer_conv_2d(filters = 512, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 512, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 512, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu")
+    # 16
+    
+    up3 <- up4 %>%
+        layer_upsampling_2d(size = c(2, 2)) %>%
+        {layer_concatenate(inputs = list(down3, .), axis = 3)} %>%
+        layer_conv_2d(filters = 256, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 256, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 256, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu")
+    # 32
+    
+    up2 <- up3 %>%
+        layer_upsampling_2d(size = c(2, 2)) %>%
+        {layer_concatenate(inputs = list(down2, .), axis = 3)} %>%
+        layer_conv_2d(filters = 128, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 128, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 128, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu")
+    # 64
+    
+    up1 <- up2 %>%
+        layer_upsampling_2d(size = c(2, 2)) %>%
+        {layer_concatenate(inputs = list(down1, .), axis = 3)} %>%
+        layer_conv_2d(filters = 64, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 64, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu") %>%
+        layer_conv_2d(filters = 64, kernel_size = c(3, 3), padding = "same") %>%
+        layer_batch_normalization() %>%
+        layer_activation("relu")
+    # 128
+    
+    classify <- layer_conv_2d(up1,
+                              filters = num_classes, 
+                              kernel_size = c(1, 1),
+                              activation = "sigmoid")
+    
+    
+    model <- keras_model(
+        inputs = inputs,
+        outputs = classify
+    )
+    
+    model %>% compile(
+        optimizer = optimizer_rmsprop(lr = 0.0001),
+        loss = bce_dice_loss,
+        metrics = custom_metric("dice_coef", dice_coef)
+    )
+    
+    return(model)
+}
+```
+
+## Model Fitting
+
+```{r}
+sem_seg_model <- get_unet_128()
+# 
+# sem_seg_model %>% 
+#   fit(x = X_train_raw, y = X_train_mask,
+#       epochs = 5
+#       )
+
+file_path_model <- "./models/SemSeg.H5"
+# save_model_hdf5(sem_seg_model, filepath = file_path_model)
+load_model_weights_hdf5(object = sem_seg_model, filepath = file_path_model)
+```
+
+## Model Evaluation
+
+```{r}
+set.seed(123)
+c(sample_raw, sample_mask) %<-% sample_image(train_images[100])
+OpenImageR::imageShow(sample_raw)
+
+sample_raw_4D <- array(NA, dim = c(1, 128, 128, 3))
+sample_raw_4D[1,,,] <- sample_raw
+
+prediction <- sem_seg_model %>% 
+  predict(sample_raw_4D)
+
+OpenImageR::imageShow(sample_raw)
+
+```
+
+We can compare it to this prediction:
+
+```{r}
+OpenImageR::imageShow(prediction[1,,,])
+```
+
+
+# Acknowledgement
+
+The data is coming from the "Inria Aerial Image Labeling Dataset". Thanks to the authors of this dataset.
+
+- (Website)[https://project.inria.fr/aerialimagelabeling/]
+
+- Title: "Can Semantic Labeling Methods Generalize to Any City? The Inria Aerial Image Labeling Benchmark"
+
+- Author: Maggiori, Emmanuel and Tarabalka, Yuliya and Charpiat, Guillaume and Alliez, Pierre
+
+- Published in IEEE International Geoscience and Remote Sensing Symposium (IGARSS)
+  
+- Year 2017
+
+- Organization: IEEE
+

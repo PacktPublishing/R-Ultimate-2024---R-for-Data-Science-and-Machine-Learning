@@ -1,0 +1,228 @@
+---
+title: "Missing Data Handling"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(Hmisc))
+suppressPackageStartupMessages(library(mice))
+suppressPackageStartupMessages(library(missRanger))
+suppressPackageStartupMessages(library(missForest))
+suppressPackageStartupMessages(library(VIM))
+```
+
+
+# Business Understanding
+
+We will create a Credit Approval model. More information can be found at this [link](http://archive.ics.uci.edu/ml/datasets/credit+approval).
+
+We will predict whether an applicant received a credit card.
+
+# Data Understanding
+
+```{r}
+file_path <- "./data/crx.data"
+
+# file was not previously downloaded
+if (!file.exists(file_path)) {
+  url <- "http://archive.ics.uci.edu/ml/machine-learning-databases/credit-screening/crx.data"
+  dir.create(path = "./data")
+  download.file(url = url, destfile = file_path)
+}
+
+# file was previously downloaded
+credit_approval <- read.csv(file = file_path, 
+               header = F)
+```
+
+The dataset has `r nrow(df)` observations and `r ncol(df)-1` attributes, plus one class attribute. The class attribute   
+
+# Data Preparation
+
+```{r}
+colnames(credit_approval) <- c("Gender", "Age", "Debt", "Married", "BankCustomer", "EducationLevel", "Ethnicity", "YearsEmployed", "PriorDefault", "Employed", "CreditScore", "DriversLicense", "Citizen", "ZipCode", "Income", "Approved")
+```
+
+
+```{r}
+# credit_approval %>% summary()
+```
+
+There are missing values in several attributes: Age, Gender, Maried, BankCustomer, EducationLevel, CreditScore, Ethnicity, ZipCode
+
+In order for a model to capture missing values, these need to be declared as NA.
+
+```{r}
+credit_approval$Gender[credit_approval$Gender == "?"] <- NA
+credit_approval$Age[credit_approval$Age == "?"] <- NA
+credit_approval$Married[credit_approval$Married == "?"] <- NA
+credit_approval$BankCustomer[credit_approval$BankCustomer == "?"] <- NA
+credit_approval$Ethnicity[credit_approval$Ethnicity == "?"] <- NA
+credit_approval$ZipCode[credit_approval$ZipCode == "?"] <- NA
+```
+
+Some later algorithms have problems with empty factor levels. With the previous code we moved all "?" levels to NA, so that "?" is now empty. To remove empty factor levels we run the following code.
+
+```{r}
+credit_approval <- credit_approval %>% 
+  dplyr::mutate(Age = as.numeric(as.character(Age))) %>% 
+  dplyr::mutate(Gender = factor(Gender)) %>% 
+  dplyr::mutate(Married = factor(Married)) %>% 
+  dplyr::mutate(BankCustomer = factor(BankCustomer)) %>% 
+  dplyr::mutate(Ethnicity = factor(Ethnicity)) %>% 
+  dplyr::mutate(ZipCode = as.numeric(as.character(ZipCode)))
+
+```
+
+
+# Missing Data Handling
+
+```{r}
+# code here
+```
+
+There are 653 datasets without missing values. The rest of the table is difficult to read, so we focus on the visualisation. It shows which attributes interact in terms of missing values.
+
+Another way of visualising it is via aggr() function
+
+```{r}
+# code here
+```
+
+
+## Removing Observations with NA
+
+The simplest solution is to remove all observations, which have NAs.
+
+```{r}
+# code here
+```
+
+The advantage is its simplicity, but it comes with several drawbacks.
+
+- For small datasets you can't afford to lose much data. In this case you would lose `r (1-nrow(credit_approval_removed_NAs)/nrow(credit_approval))*100` % of all data.
+
+- If you just remove the data, you implicitly assume that NAs distribute randomly over all attributes, but that does not have to be true. So you might add a bias to your data.
+
+For these reasons there are more advanced solutions and R has powerful packages for it.
+
+##  Univariate Imputation
+
+### Fill with Median
+
+For univariate imputation you analyse each attribute, calculate its median, and apply it to missing data.
+
+```{r}
+# code here
+```
+
+Instead of median, a fixed value might be chosen.
+
+### Sampling with Replacement
+
+You might also sample with replacement. In this case you take all non-NA values and take samples at the position of NAs. Implicitly, you rely on underlying distribution of data.
+
+Based on the two runs, you can see that NA is replaced with a one or zero, depending on seed. This reflects randomness of the process.
+
+```{r}
+# code here
+```
+
+```{r}
+# code here
+```
+
+## Multivariate Imputation
+
+## missRanger
+
+Chained tree ensembles are used for imputation.
+
+```{r}
+# code here
+```
+
+```{r}
+# code here
+```
+
+## missForest
+
+This implements a random forest algorithm. It does not make any assumptions about the data. It creates a random forest for each variable.
+
+```{r}
+# code here
+```
+
+```{r}
+# code here
+```
+
+## MICE
+
+Mice is an acronym and means Multivariate Imputation via Chained Equations.
+
+```{r}
+# code here
+```
+
+# Result Comparison
+
+```{r}
+credit_all_models <- rbind(
+  credit_approval_removed_NAs %>% add_column(method = "Removed NA"),
+  credit_approval_missForest %>% add_column(method = "missForest"),
+  credit_approval_missRanger %>% add_column(method = "missRanger"),
+  credit_approval_mice %>% add_column(method = "mice")
+)
+```
+
+Further data processing
+
+```{r}
+credit_all_models <- credit_all_models %>%
+  dplyr::mutate(Gender = ifelse(Gender == "a", 1, 0)) %>%
+  dplyr::mutate(Age = as.numeric(as.character(Age))) %>%
+  dplyr::mutate(Approved = ifelse(Approved == "+", 1, 0)) %>% 
+  dplyr::select(Gender, Age, Debt, CreditScore, ZipCode, method)
+credit_all_models_scaled <- credit_all_models[, 1:5] %>% scale() %>% 
+  as.tibble()
+credit_all_models_scaled$method <- credit_all_models$method
+
+credit_all_gather <- credit_all_models_scaled %>% 
+  gather(key = "variable", value = "value", 1:5) %>% 
+  mutate(value = as.numeric(value)) %>% 
+  mutate(variable = as.factor(variable)) %>% 
+  mutate(method = as.factor(method))
+```
+
+
+```{r}
+g <- ggplot(credit_all_gather, aes(x = variable, y = value, col = method))
+g <- g + geom_boxplot()
+g <- g + labs(title = "Model Comparison", x = "Method", y = "Scaled Value [-]")
+g
+```
+
+
+
+# Acknowledgement
+
+We thank the author for this dataset.
+
+Author: J. Ross Quinlan
+Title: Simplifying Decision Trees
+Journal: Int. J. Hum.-Comput. Stud
+Year: 1987
+

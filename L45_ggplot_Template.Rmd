@@ -1,0 +1,147 @@
+---
+title: "Data Visualisation with ggplot2"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+# Data Preparation
+
+```{r}
+data("diamonds")
+diamonds %>% glimpse()
+```
+
+# One Variable
+
+## Discrete 
+
+```{r}
+diamonds %>% 
+  # code here
+```
+
+## Continuous
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  # code here
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  # code here
+```
+
+```{r}
+diamonds %>% 
+  sample_n(100) %>% 
+  ggplot(aes(x = table)) + 
+  # code here
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  # code here
+```
+
+# Two Variables
+
+## Continuous X, Continous Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, y = y)) + 
+  # code here
+```
+
+## Continuous X, Discrete Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price, y = clarity)) + 
+  # code here
+```
+
+
+## Discrete X, Continuous Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  # code here
+```
+
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  # code here
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  # code here
+```
+
+## Discrete X, Discrete Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = cut)) + 
+  # code here
+```
+
+# Further Dimensions
+
+## Color
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, y = y, # code here)) + 
+  # code here
+```
+
+## Facets
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, 
+             y = y, 
+             col = price)) + 
+  # code here
+```
+
+## Size 
+
+```{r}
+diamonds %>% 
+  ggplot(data = ., 
+         aes(x = x, 
+             y = y, 
+             col = price,
+             # code here)) + 
+  geom_point(alpha = .2) + 
+  facet_grid(cut ~ color) +
+  scale_color_continuous(low = "green", 
+                         high = "red")
+```

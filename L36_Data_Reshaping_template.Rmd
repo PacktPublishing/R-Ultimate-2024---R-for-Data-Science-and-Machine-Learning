@@ -1,0 +1,105 @@
+---
+title: "Data Reshaping"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages
+ 
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
+```
+
+
+# Introduction
+
+Data can be reshaped by 
+
+- transforming columns into rows
+
+- rows into columns
+
+This is directly combined with wide and tidy-data.
+
+```{r}
+school_wide <- data.frame(name = c("Stuart", "Bob", "Kevin"),
+             math = c(2, 3, 4),
+             sport = c(3, 1, 2),
+             art = c(3, 2, 1))
+```
+
+# From Wide to Tidy-Data
+
+If you want to transform data from wide to tidy you can use functions from package **tidyr**. The relevant function is *gather()*. You need to provide some parameters
+
+- a key parameter name, which represents the columns. I will call the resulting column subject
+
+- a value parameter, which will be the name of the columns holding the values
+
+- Finally, you need to define which columns to use for transformation. Here this is 2:4.
+
+```{r}
+# we put our code here
+```
+
+# From Tidy to Wide-Data
+
+The function with the opposite effect is *spread()*. You need to pass the exact same parameters:
+
+- key: here you define the column name of the key-column
+
+- value: you pass the chosen name of the column with the values
+
+```{r}
+# we put our code here
+```
+
+# Why are there two different formats?
+
+Both have their right to exist. Wide data typically comes from other programs. Excel or SPSS usually work with wide-data.
+
+For specific tasks it is better to transform wide-data (also called messy data) into tidy-data. I will show two examples.
+
+## Example 1: Calculate group averages
+
+Assume you want to calculate average class-grades per subject. With wide data you would do something like this:
+
+```{r}
+# we put our code here
+```
+
+You repeat your code several times, which should be avoided. If there are only three columns, that is ok, but imagine you want to calculate the average for 50 columns.
+
+Here is the solution based on tidy-data. You need to load **dplyr** package and make use of *group_by()* and *summarise()*. The code is much cleaner.
+
+**dplyr** and **tidyr** are part of the tidyverse, which is a bunch of different packages, which rely on tidy-data.
+
+```{r}
+# we put our code here
+```
+
+## Example 2: Plotting with ggplot2
+
+Assume you want to plot the results with ggplot2. This is done with three lines of code. Trying to get a similar representation based on wide-data will result in much more complex code.
+
+```{r}
+library(ggplot2)
+g <- ggplot(data = school_tidy, 
+            mapping = aes(name, grade, fill = subject))
+g <- g + geom_bar(stat = "identity", position = "dodge")
+g
+```
+
+# Conclusion
+
+You have seen how easy it is to transform data from wide to tidy, and reverse. You also saw some examples in which tidy-data has advantages over wide-data.
+

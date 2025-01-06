@@ -1,0 +1,60 @@
+---
+title: "Package Preparation"
+author: "Bert Gollnick"
+date: "October 25, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# CRAN Package Installation
+
+```{r}
+packages_to_install <- c(
+  "arules",  # association rules
+  "arulesViz",  # association rules visualisation
+  "babynames",  # data for babynames
+  "caret",  # Machine Learning framework
+  "caTools",  # basic functionality
+  "caretEnsemble",  # ensemble learning
+  "cluster",  # cluster analysis
+  "corrplot",  # correlation plots
+  "datasets",  # includes some datasets we will work with
+  "dbscan",  # dbscan algorithm
+  "dendextend",  # extended dendrograms
+  "devtools",  # for package installation outside CRAN
+  "dplyr",  # data manipulation
+  "e1071",  # machine learning algorithms
+  "factoextra",  # factor analysis
+  "ggplot2",  # visualisation
+  "glmnet",  # regularization
+  "keras",  # deep learning
+  "lava",  # 
+  "pROC",  # ROC curve
+  "randomForest",  # Random Forest algorithm
+  "rattle",  # machine learning algorithm
+  "readr",  # data import
+  "rpart",  # Decision Trees
+  "rpart.plot",  # visualise Decision Trees
+  "stats",  # statistical methods
+  "tibble",  # data manipulation
+  "tidyr"   # data manipulation
+)
+
+install.packages(packages_to_install, dependencies = T)
+```
+
+# Packages outside CRAN
+
+```{r}
+install.packages("rlang")
+remotes::install_github("vqv/ggbiplot")
+```

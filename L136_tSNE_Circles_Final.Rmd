@@ -1,0 +1,109 @@
+---
+title: "t-SNE in Comparison to PCA for Circles"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Introduction
+
+```{r}
+library(Rtsne)
+library(keras)
+library(tidyverse)
+library(plotly)
+```
+
+# Data Preparation
+
+First, we create the data.
+
+```{r}
+set.seed(123)
+df <- dplyr::tibble(x = runif(n = 1000, min = -10, max = 10),
+                    y = runif(n = 1000, min = -10, max = 10),
+                    z = runif(n = 1000, min = -10, max = 10)) %>%
+    dplyr::mutate(r = x^2+y^2+z^2) %>% 
+      dplyr::mutate (class = ifelse(r < 20, 1, 0)) %>%
+  dplyr::filter(r < 100) %>% 
+  dplyr::filter(r < 20 | r > 70) %>% 
+  select(-r)
+```
+
+Now we visualise the data.
+
+```{r}
+df %>% 
+  filter (z > -2 & z < 2) %>% 
+  ggplot(aes(x, y, col = factor(class))) + 
+  geom_point() +
+  theme_bw() + 
+  scale_color_discrete(name = "Class")
+```
+
+We can also create a three-dimensional plot with plotly.
+
+```{r}
+plotly::plot_ly(df, x = ~x, y =~y, z=~z, color = ~class)
+```
+
+
+# t-SNE Model
+
+A t-SNE model is created. The function **Rtsne()** is applied.
+
+```{r}
+tsne_model = Rtsne(df %>% select(-class),
+                     check_duplicates = F, 
+                     pca = T, 
+                     perplexity = 30, 
+                     theta = 0.5, 
+                     dims = 2)
+
+## getting the two dimension matrix
+result_tsne <- as_tibble(tsne_model$Y)  
+result_tsne$label <- df$class
+```
+
+Now we can create the results plot.
+
+```{r}
+ggplot(result_tsne, aes(x=V1, y=V2, col = as.factor(label))) +  
+  geom_point(size=2) +
+  labs(x = "", y = "", title = "t-SNE") + 
+  theme_bw() + 
+  scale_color_discrete(name = "Label")
+```
+
+All classes are nicely separated.
+
+# PCA Model
+
+A PCA model is created with **prcomp()**.
+
+```{r}
+pca_model <- prcomp(x = df, center = T, scale. = F)
+
+result_pca <- tibble(PC1 = pca_model$x[, 1],
+                     PC2 = pca_model$x[, 2],
+                     label = df$class)
+```
+
+We can now visualise the result.
+
+```{r}
+ggplot(result_pca, aes(x=PC1, y=PC2, col = factor(label))) +  
+  geom_point(size=2) +
+  labs(x = "", y = "", title = "PCA") + 
+  theme_bw() + 
+  scale_color_discrete(name = "Label")
+```
+
+The labels are overlapping a lot. They are not as nicely separated as for t-SNE.

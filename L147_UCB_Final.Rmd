@@ -1,0 +1,190 @@
+---
+title: "Upper Confidence Bound"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+library(knitr)
+```
+
+
+# Problem Description
+
+Imagine you are in a casino and can choose to play at one of five Bandit. All have different distributions of returns. Which one should you choose?
+
+# Bandit Returns
+
+The designer of the bandits inherently designed average and variation parameters into the machines.
+
+```{r}
+set.seed(123)
+bandits_design <- data_frame(Bandit = c("A", "B", "C", "D", "E"),
+                             Mean = c(.97, .98, 1.1, .99, .96),
+                             SD = c(.05, .15, .10, .11, .08))
+
+bandits <- data_frame(A = rnorm(n = 1000, mean = bandits_design$Mean[bandits_design$Bandit == "A"], 
+                                sd = bandits_design$SD[bandits_design$Bandit == "A"]),
+                      B = rnorm(n = 1000, mean = bandits_design$Mean[bandits_design$Bandit == "B"], 
+                                sd = bandits_design$SD[bandits_design$Bandit == "B"]),
+                      C = rnorm(n = 1000, mean = bandits_design$Mean[bandits_design$Bandit == "C"], 
+                                sd = bandits_design$SD[bandits_design$Bandit == "C"]),
+                      D = rnorm(n = 1000, mean = bandits_design$Mean[bandits_design$Bandit == "D"], 
+                                sd = bandits_design$SD[bandits_design$Bandit == "D"]),
+                      E = rnorm(n = 1000, mean = bandits_design$Mean[bandits_design$Bandit == "E"], 
+                                sd = bandits_design$SD[bandits_design$Bandit == "E"])
+
+
+                                       )
+bandits_gather <- bandits %>% 
+  gather(key = "Bandit", value = "Return") 
+bandits_gather$Return_binary <- ifelse(bandits_gather$Return < 1, 0, 2)
+
+
+summary(bandits_gather)
+bandit_means <- bandits_gather %>% 
+  group_by(Bandit) %>% 
+  summarise(Mean = mean(Return))
+```
+
+Their distributions of returns is shown in the following graph.
+
+```{r}
+g <- ggplot(bandits_gather, aes(x=Bandit, y=Return, fill = Bandit))
+g <- g + geom_violin()
+g <- g + geom_hline(yintercept = 1.00)
+g <- g + coord_cartesian(ylim = c(.50, 1.50))
+g <- g + geom_point(data=bandit_means, aes(x = Bandit, y = Mean))
+g <- g + xlab("Bandit")
+g <- g + xlab("Return [-]")
+g <- g + ggtitle("Bandit Returns")
+g <- g + theme(legend.position="bottom")
+
+g <- g + labs(y = "Average Return [-]", x = "Round [-]", title = "Average Return and Round")
+g <- g + theme_bw()
+g <- g + theme(text = element_text(size=12))
+g
+```
+
+And here in tabular form:
+
+```{r}
+bandits_design %>% kable()
+```
+
+
+We will check if our random values have the same average values.
+
+```{r}
+bandits_gather %>% 
+  group_by(Bandit) %>% 
+  summarise(Mean = round(mean(Return), 3)) %>% 
+  kable()
+```
+
+# Exploration / Exploitation with Time
+
+This information is only know to the designer, but not to the player. The player might perform a set of runs, e.g. 1000 runs, per machine, and find out that machine B is having the highest return. But this strategy is very costly.
+
+We decide to play 100 rounds. In each round we decide to play on which machine based on previous knowledge.
+
+```{r}
+df_round <- data_frame(Bandit = c("A", "B", "C", "D", "E"),
+                     N = 1,  # number of times the slot machine was played 
+                     R = 1,  # sum of rewards
+                     r = 1,  # average reward
+                     delta = 1E4,  # confidence interval
+                     upper_conf_bound = 1E10)  # r + delta
+
+max_it <- 1000  # maximum iteration
+
+df_iterations <- data_frame(n = 1:max_it,
+                            SelectedBandit = NA,
+                            UCB = NA,
+                            r = NA,
+                            delta = NA
+                            )
+bandit_names <- df_round$Bandit
+
+for (n in 2:max_it) {
+  # for very first iteration just start randomly
+  if (n == 2) {  
+    bandit_chosen_name <- "A"
+    bandit_chosen_nr <- which(df_round$Bandit == bandit_chosen_name)
+  }
+  # increase nr of runs per selected machine
+  df_round$N[bandit_chosen_nr] <- df_round$N[bandit_chosen_nr] + 1
+  # get mean/sd of selected machine
+  current_bandit_mean <- bandits_design$Mean[bandit_chosen_nr]
+  current_bandit_sd <- bandits_design$SD[bandit_chosen_nr]
+  # calculate current return
+  current_return <- rbinom(n = 1, 
+                              prob = current_bandit_mean/2, 
+                              size = 1) * 2
+  
+  # calculate sum of returns
+  df_round$R[bandit_chosen_nr] <- df_round$R[bandit_chosen_nr] + current_return
+  # calculate average returns
+  df_round$r[bandit_chosen_nr] <- df_round$R[bandit_chosen_nr] / df_round$N[bandit_chosen_nr]
+  # calculate confidence interval
+  df_round$delta[bandit_chosen_nr] <- sqrt(2*log(n) / df_round$N[bandit_chosen_nr])
+  # calculate upper confidence bound
+  df_round$upper_conf_bound[bandit_chosen_nr] <- df_round$r[bandit_chosen_nr] + df_round$delta[bandit_chosen_nr]
+
+  # store selection in df_iteration
+  df_iterations$SelectedBandit[n] <- bandit_chosen_name
+  df_iterations$UCB[n] <- df_round$upper_conf_bound[bandit_chosen_nr]
+  df_iterations$r[n] <- df_round$r[bandit_chosen_nr]
+  df_iterations$delta[n] <- df_round$delta[bandit_chosen_nr]
+  
+  # define bandit for next run
+  bandit_chosen_nr <- which.max(df_round$upper_conf_bound)
+  bandit_chosen_name <- bandits_design$Bandit[bandit_chosen_nr]
+}  
+```
+
+```{r}
+g <- ggplot(df_iterations %>% dplyr::filter(!is.na(SelectedBandit)), aes(x = n,
+                               y = r, 
+                               col = SelectedBandit))
+g <- g + geom_point()
+g <- g + theme_bw()
+g <- g + theme(text = element_text(size=12))
+g <- g + theme(legend.position="bottom")
+g <- g + labs(y = "Average Return [-]", x = "Round [-]", title = "Average Return and Round")
+g
+```
+
+# Exploration / Exploitation at specific Timesteps
+
+The graph shows for the current round the confidence bounds for all bandits. The red bar represents the bandit with the highest upper confidence bound, that will be selected for the next round.
+
+
+```{r}
+g <- ggplot(df_round, aes(x = Bandit, 
+                          y = r))
+g <- g + geom_point()
+g <- g + geom_errorbar(aes(ymin = r - delta,
+                           ymax = r + delta))
+g <- g + geom_point(data = df_round[which.max(df_round$upper_conf_bound), ], col = "red")
+g <- g + geom_errorbar(data = df_round[which.max(df_round$upper_conf_bound), ], col = "red",
+                       aes(ymin = r - delta,
+                           ymax = r + delta))
+g <- g + labs(x = "Bandit", y = "Confidence Bound [-]", title = "Confidence Bound")
+g <- g + theme_bw()
+g <- g + theme(text = element_text(size=12))
+g <- g + theme(legend.position="bottom")
+g
+```
+

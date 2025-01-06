@@ -1,0 +1,144 @@
+---
+title: "PCA: Solution"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggbiplot))
+suppressPackageStartupMessages(library(stats))
+```
+
+# Introduction
+
+We will work on wholesale data. The data set refers to clients of a wholesale distributor. It includes the annual spending in monetary units (m.u.) on diverse product categories.
+
+# Data Understanding
+
+Data and description of data is found [here](https://archive.ics.uci.edu/ml/datasets/Wholesale+customers).
+
+The data has these attributes:
+
+1)	FRESH: annual spending (m.u.) on fresh products (Continuous); 
+2)	MILK: annual spending (m.u.) on milk products (Continuous); 
+3)	GROCERY: annual spending (m.u.)on grocery products (Continuous); 
+4)	FROZEN: annual spending (m.u.)on frozen products (Continuous) 
+5)	DETERGENTS_PAPER: annual spending (m.u.) on detergents and paper products (Continuous) 
+6)	DELICATESSEN: annual spending (m.u.)on and delicatessen products (Continuous); 
+7)	CHANNEL: customersâ€™ Channel - Horeca (Hotel/Restaurant/CafÃ©) or Retail channel (Nominal) 
+8)	REGION: customersâ€™ Region â€“ Lisnon, Oporto or Other (Nominal) 
+
+# Data Preparation
+
+## Data Download
+
+First we download the data.
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/wholesale.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00292/Wholesale%20customers%20data.csv"
+  download.file(url = url, 
+                destfile = file_path)
+}
+```
+
+## Data Import
+
+Import the data and assign it to a dataframe, called "sale_raw".
+
+```{r}
+file_name <- "./data/wholesale.csv"
+sale_raw <- read.csv(file = file_name, header = T)
+```
+
+## Data Understanding
+
+Find out if there are NA to be handled!
+
+```{r}
+summary(sale_raw)
+```
+
+There are no NA's that need to be handled.
+
+## Data Manipulation
+
+But certain variables are defined as numeric, like channel or region. In fact they would be rather factors. PCA works based on distances. So these variables are not appropriate and you should drop them.
+
+```{r}
+sale_mod <- sale_raw %>% 
+  select(-Region, -Channel)
+```
+
+# Principal Component Analysis
+
+Perform a principal component analysis and assign its result to an object called "sale_pca". PCA is very sensitive to scaling, so you need to scale the data. 
+
+```{r}
+sale_pca <- prcomp(sale_mod, center = T, scale. = T)
+```
+
+## Scree-Plot and Number of Components
+
+Create the scree-plot.
+
+```{r}
+plot(sale_pca, type = "l")
+```
+
+How many components would you select based on the methods you learned?
+
+You should see a clear "elbow" at three. Here, we use Kaiser criterion and choose as many components as have eigenvalues above one.
+
+## Explained Variance
+
+How much of overall variance is explained by the first two components?
+
+```{r}
+n_components <- 2
+sale_variance <- sale_pca$sdev**2
+explained_variance <- round(sum(sale_variance[1:n_components]) / sum(sale_variance) * 100, 2)
+paste("The first", n_components, "components explain", explained_variance, "% of all variance.")
+```
+
+## Visualisation
+
+Create with **ggbiplot()** a visualisation that shows the first two principal components.
+
+```{r}
+ggbiplot(pcobj = sale_pca, ellipse = T, alpha = .1)
+```
+
+Which variables have similar loadings?
+
+Fresh and Frozen behave similar, this means they are strongly correlated. Detergents, Paper, Grocery, and Milk are also correlated.
+
+## Business Impact
+
+Think about what impact these results could have on the store layout?
+
+```{r}
+"You have seen which variables have similar loadings, you could take this into account and place them close to each other."
+```
+
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Margarida G. M. S. Cardoso, margarida.cardoso '@' iscte.pt, ISCTE-IUL, Lisbon, Portugal

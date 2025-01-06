@@ -1,0 +1,205 @@
+---
+title: "Stringr and Regular Expressions"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Introduction
+
+A good introduction on stringr and regular expressions can be found [here](https://stringr.tidyverse.org/articles/regular-expressions.html).
+
+You also can make use of the (cheatsheet)[https://www.rstudio.com/wp-content/uploads/2016/09/RegExCheatsheet.pdf].
+
+# Packages
+
+```{r}
+library(stringr)  # stringr is part of tidyverse
+```
+
+Stringr is part of the tidyverse, so we don't need to load it separately.
+
+```{r}
+string <- c('R for Data Handling, Data Science, and Machine Learning 2020',
+            'Python for Machine Learning',
+            'Julia for Statistics'
+            )
+string
+```
+
+# Detect Patterns
+
+We can detect patterns with grep or grepl (base R) or with functions from string r package, like str_detect.
+
+```{r}
+pattern <- "ata"
+
+# return logical for each element
+str_detect(string = string, pattern = pattern)  # similar to grepl
+grepl(x = string, pattern = pattern)
+
+grep(x = string, pattern = pattern)
+
+# return value, that includes the string
+grep(x = string, pattern = pattern, value = T)
+```
+
+# Locate Patterns within string
+
+With **str_locate** we can find the location of a pattern within the string, or with **str_locate_all** for all locations in the string.
+
+```{r}
+str_locate(string = string, 
+           pattern = pattern)  # finds start and end position of FIRST matches
+str_locate_all(string = string, pattern = pattern)  # finds start and end position of all matches
+```
+
+# Replace Patterns
+
+We can replace patterns with **str_replace**. A specific pattern is replaced by another pattern.
+
+```{r}
+str_replace(pattern = "Data", string = string, replacement = "DATA")  # similar to sub
+str_replace_all(pattern = "Data", string = string, replacement = "DATA")  # similar to gsub
+```
+
+# Split a String
+
+The string can be splitted at specific delimiters.
+
+```{r}
+pattern <- " "
+
+str_split(string = string[1], pattern = pattern, simplify = T)
+```
+
+# Extract Patterns
+
+Patterns can be extracted with **str_extract**.
+
+```{r}
+pattern <- "Learning"
+str_extract_all(string = string, pattern = pattern, simplify = T)
+str_match_all(string = string, pattern = pattern)
+```
+
+# Regular Expressions
+
+So far we used normal text as patterns. Now we will make it more generic.
+
+## Character Classes
+
+You can define a pattern for digits [[:digit:]] or non-digits "\\D"
+
+```{r}
+# detect digits
+pattern <- "[[:digit:]]"
+str_detect(string = string, pattern = pattern)
+
+# detect non-digits
+pattern <- "\\D"
+str_detect(string = string, pattern = pattern)
+
+```
+
+Similar you can search for lower case [[:lower:]] and upper case [[:upper:]].
+
+```{r}
+pattern <- "[[:lower:]]"
+
+str_detect(string = string, pattern = pattern)
+```
+
+It does check if there are lower case characters and not if all characters are lower-case.
+
+Other useful character classes are 
+
+- . any character
+
+- | or, like in (a|b)
+
+- [...]  permitted characters, e.g. [abcd]
+
+- [a-d]  character ranges
+
+
+## Anchors
+
+Normally the patterns are searched in the complete string. If you want to restrict the pattern to be found only at the beginning or at the end.
+
+- ^  matches at the beginning
+
+- $  matches at the end
+
+Search for words starting with "H".
+
+```{r}
+pattern <- "^R"
+grep(x = string, pattern = pattern)
+```
+
+Search for words with an "a" at the second position.
+
+```{r}
+pattern <- "^.y"
+grep(x = string, pattern = pattern)
+
+```
+
+## Quantifiers
+
+The matching can occure a number of times.
+
+- "?" for zero or one matching
+
+- "+" for one or more matchings
+
+- "*" for zero or more matchings
+
+We want to search for a number with at least 3 digits.
+
+- "{n}"  matches n times
+
+- "{n,m}"  matches between n and m times
+
+```{r}
+string <- c("1", "10", "100", "1000")
+pattern <- "\\d{3}"
+str_extract(string = string, pattern = pattern)
+```
+
+
+
+## Look Arounds
+
+With look arounds you can look before or after the matching pattern.
+
+- (?=...)  positive look-ahead (it matches when the dots match the input)
+
+- (?!...)  negative look-ahead
+
+- (?<=...) positive look-behind
+
+Now we have a more complex example.
+
+```{r}
+string <- c("100 course", "2 courses", "1 instructor")
+```
+
+We want to detect the locations of "1 course" or "2 courses". For this, the word course or courses needs to be found together with a precending space and a number.
+
+```{r}
+pattern <- "\\d*(?= course?)"
+str_detect(string = string,
+            pattern = pattern)
+```
+
+

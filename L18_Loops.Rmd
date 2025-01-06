@@ -1,0 +1,66 @@
+---
+title: "Loops"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# For Loops
+
+```{r}
+sequence <- 1:10
+
+for (i in sequence) {
+  print(i)
+}
+```
+
+```{r}
+inner <- 1:5
+outer <- 1:5
+for (o in outer) {
+  for (i in inner) {
+    print(paste(o, ", ", i))
+  }
+}
+```
+
+# While Loop
+
+We will create a loop from a first letter to a last letter.
+
+```{r}
+final_letter <- "A"
+letter <- "A"
+while (letter != final_letter) {
+  print(letter)
+  letter_pos <- which(letter == LETTERS)
+  letter <- LETTERS[letter_pos + 1]
+}
+```
+
+# Repeat Loop
+
+
+
+```{r}
+final_letter <- "T"
+l <- "A"
+repeat {
+  pos <- which(l==LETTERS) + 1
+  l <- LETTERS[pos]
+  if (l == final_letter) {
+    break
+  }
+  print(l)
+}
+```
+

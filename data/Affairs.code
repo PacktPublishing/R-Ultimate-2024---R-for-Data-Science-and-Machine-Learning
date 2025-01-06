@@ -1,0 +1,34 @@
+SET DECIMAL=DOT.
+
+DATA LIST FILE= "./data/Affairs.sps"  free (",")
+ENCODING="Locale"
+/ sex (F8.0) age ym * child (F8.0) religious education occupation rate 
+ nbaffairs 
+  .
+
+VARIABLE LABELS
+sex "sex" 
+ age "age" 
+ ym "ym" 
+ child "child" 
+ religious "religious" 
+ education "education" 
+ occupation "occupation" 
+ rate "rate" 
+ nbaffairs "nbaffairs" 
+ .
+
+VALUE LABELS
+/
+sex 
+1 "female" 
+ 2 "male" 
+/
+child 
+1 "no" 
+ 2 "yes" 
+.
+VARIABLE LEVEL age, ym, religious, education, occupation, rate, nbaffairs 
+ (scale).
+
+EXECUTE.

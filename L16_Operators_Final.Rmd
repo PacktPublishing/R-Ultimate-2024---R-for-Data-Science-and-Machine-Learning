@@ -1,0 +1,65 @@
+---
+title: "Operators"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Arithmetic Operators
+
+```{r}
+a <- c(20, 40, 60)
+b <- c(100, 3, 5)
+``` 
+
+```{r}
+a+b
+a-b
+a/b
+a*b
+```
+
+You can use the exponent function with ^ or **:
+
+```{r}
+b**a
+```
+
+For integer division you have 
+
+```{r}
+a %%b  # modulus 
+
+a %/%b  # div
+```
+
+# Logical Operators
+
+There are logical operators, which return a boolean result.
+
+```{r}
+a < b
+a <= b
+a > b
+a >= b
+a == b
+a != b
+```
+
+# Special Operators
+
+```{r}
+a <- seq(0,10, 2)
+b <- seq(0, 10, 3)
+
+b %in% a
+```
+

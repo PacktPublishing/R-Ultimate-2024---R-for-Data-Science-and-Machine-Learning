@@ -1,0 +1,83 @@
+---
+title: "Leaflet"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Introduction
+
+* Objectives: leaflet, geospatial
+* Requirements: R Data-Mining
+
+In 1854 a Cholera epidemic haunts London. By then common theory is that Cholera is transmitted by air. English physician John Snow doubts this theory and is maybe the first one to perform geospatial analysis. He plot locations of Cholera-deaths and pumps and finds the causal link between water and Cholera. We will take a look at his results and learn how to use _leaflet_ package.
+
+# Data Import
+
+You need to download data of _Cholera Pumps & Deaths_ from the link in Bibliography at the end of this article and save .csv file locally.
+
+```{r}
+# Import Data
+deaths_pumps <- read.csv("./data/Cholera Pumps & Deaths.csv")
+```
+
+# Data Preparation
+
+For our tutorial we need two packages:
+
+* _leaflet_ for geospatial plotting
+
+* _dplyr_ for data preparation
+
+```{r}
+library(leaflet)
+library(dplyr)
+```
+
+_geometry_ variable in _deaths_pumps_ requires an extraction of longitude and latitude coordinates. Some irrelevant information is removed with _gsub_. Then, longitude and latitude information is extracted with _strsplit_, _unlist_ and _as.numeric_. Coordinates (long and lat) are stored in one long vector _coords_. But they are easy to split: longitudes are small (below zero) and latitudes above 50.
+
+Then, dataframe _deaths_pumps_ is separated into _deaths_ and _pumps_. Deaths are indicated by a count above 0 and pumps by a count below 0.
+
+```{r}
+deaths_pumps$geometry <- gsub("<Point><coordinates>", "", deaths_pumps$geometry)
+deaths_pumps$geometry <- gsub("</coordinates></Point>", "", deaths_pumps$geometry)
+coords <- deaths_pumps$geometry %>% strsplit(., ",") %>% unlist() %>% as.numeric()
+	
+deaths_pumps$long <- coords[coords < 2]
+deaths_pumps$lat <- coords[coords > 50]
+deaths <- deaths_pumps %>% filter (count > 0)
+pumps <- deaths_pumps %>% filter (count < 0)
+
+median_location <- data.frame(long = median(deaths$long), 
+		     lat = median(deaths$lat))
+```
+
+# Create Geospatial Plot
+
+We create an object _lf_ which will include all our information on the plot. First, we apply function _leaflet_ and make extensive use of piping operator to load further information. We use Stamen.Toner to get the more classical black and white look. With _setView_ we define the center and zoom of our map. We add circles for deaths and pumps. 
+
+Deaths are marked in red. With increasing death count radius increases. Pumps are marked in green.
+```{r}
+# code here
+```
+
+# Conclusion
+
+With this visualisation Snow was able to detect certain hotspots. In Broadwick Street (then: Broad Street) there is a pump and many Cholera-related deaths, while in other regions there are pumps and no deaths at all. Based on this he was able to refuse theory of air-borne Cholera transfer. He put his theory to test by disabling pump in Broad Street and saved many lifes.
+
+We learned how easy it is to reproduce his results with _leaflet_.
+
+# Bibliography
+
+* John Snow Wikipedia https://en.wikipedia.org/wiki/John_Snow
+
+* Cholera Pumps and Deaths Data https://fusiontables.google.com/DataSource?docid=147wlDisDp6NnpNxHQpbnjAQ-iW4dR2MAmFdQxYc#rows:id=1
+

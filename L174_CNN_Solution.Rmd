@@ -1,0 +1,261 @@
+---
+title: "Deep Learning: CNN Solution"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Business Understanding
+
+We will work on Snake Eyes dataset. You can find more information [here](https://www.kaggle.com/nicw102168/snake-eyes/home).
+
+It includes tiny images of dices.
+
+# Data Understanding
+
+The data format is csv, with records of 401 columns. The first column contains the class (1 to 12, notice it does not start at 0), and the other 400 columns are the image rows. Each file consists of 100k images. There is an extra test set with 10,000 images.
+
+## Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(pheatmap)
+library(keras)
+```
+
+
+# Data Preparation
+
+Please import all files, stored under subfolder "data_CNN_exercise", and assign it to a dataframe, called "snake_eyes".
+
+The data is stored in 10 different files. Each of them has 401 columns. The first represents the target variable "dice sum". The columns two to 401 represent the image.
+
+For simplicity we import only the first file. Save it as "SnakeEyes.RDA".
+
+```{r}
+# prepare resulting dataframe
+# file_path <- "./data_CNN_exercise/snakeeyes_test.csv"  # set file for test
+# snake_eyes <- read.table(file = file_path)  # read test file
+# snake_eyes <- snake_eyes[0, ]  # remove all lines, just keep structure
+# 
+# files <- list.files(path = "./data_CNN_exercise")
+# files <- files[1]  # only use the first file
+# 
+# for (file in files) {
+#   temp <- read.table(file = paste0("./data_CNN_exercise/",file))
+#   snake_eyes <- base::rbind(snake_eyes, temp)
+#   print(file)
+# }
+
+# Clean-Up
+# rm(file, file_path, files)
+
+# Import test data
+# snake_eyes_test <- read.table("./data_CNN_exercise/snakeeyes_test.csv")
+
+# save results
+# save(snake_eyes, snake_eyes_test, file = "SnakeEyes.RDA")
+```
+
+If the data import was too complicated or you rather want to focus on Machine Learning related issues, you can start from here.
+
+- Load "SnakeEyes.RDA" from the current working directory. 
+
+- Only keep the first 10000 lines (for faster training)
+
+- Assign the first column of "snake_eyes" to an object called "y_train". 
+
+- Assign the second to 401st column of "snake_eyes" to an object "X_train".
+
+```{r}
+load("SnakeEyes.RDA")
+snake_eyes <- snake_eyes[1:10000, ]
+X_train <- snake_eyes[, 2:401]
+y_train <- snake_eyes[, 1] - 1
+
+X_test <- snake_eyes_test[, 2:401]
+y_test <- snake_eyes_test[, 1]-1
+```
+
+
+```{r}
+y_train %>% table()
+y_test %>% table()
+
+```
+
+
+Take a look at the summary of one column, e.g. "V28". What are the min and max values?
+
+```{r}
+summary(X_train$V28)
+```
+
+The training and test data has a range from 0 to 255.
+
+Please modify the data so that the data ranges from 0 to 1! Check the same column to see if it worked.
+
+```{r}
+X_train <- X_train / 255
+X_test <- X_test / 255
+
+summary(X_train$V28)
+```
+
+Visualise a sample image, e.g. image number 20 with a visualisation of your choice!
+
+I use "pheatmap()".
+
+```{r}
+image_nr <- 20
+sample_image <- X_train[image_nr, ] %>% 
+  as.numeric() %>% 
+  matrix(data = ., nrow = 20, ncol = 20)
+y_train[image_nr]
+pheatmap(sample_image, cluster_rows = F, cluster_cols = F)
+```
+
+You can see one dice with with diagonals loaded. This represents a two!
+
+## Data Reshaping
+
+We need to rearrange our training and validation data to make it work with CNN.
+
+```{r}
+n_images <- nrow(X_train)
+n_max <- 20
+
+# Training Data
+X_train_reshaped <- array(dim = c(n_images, n_max, n_max, 1))
+for (i in 1:n_images) {
+  temp <- X_train[i, ] %>% 
+    as.numeric() %>% 
+    matrix(data = ., nrow=n_max, ncol = n_max)
+  X_train_reshaped[i, , , 1] <- temp
+}
+
+# Test Data
+n_images <- nrow(X_test)
+X_test_reshaped <- array(dim = c(n_images, n_max, n_max, 1))
+for (i in 1:n_images) {
+  temp <- X_test[i, ] %>% 
+    as.numeric() %>% 
+    matrix(data = ., nrow=n_max, ncol = n_max)
+  X_test_reshaped[i, , , 1] <- temp
+}
+
+```
+
+
+# Model
+
+## Layer Setup and Model Configuration
+
+```{r}
+create_cnn_model <- function() {
+  dnn_cnn_model <- 
+    keras_model_sequential() %>% 
+    layer_conv_2d(filters = 2, 
+                  kernel_size = 3, 
+                  input_shape = c(20, 20, 1),
+                  activation = 'relu') %>% 
+    layer_conv_2d(filters = 8, 
+                  kernel_size = c(3, 3), 
+                  activation = 'relu') %>% 
+    layer_max_pooling_2d(pool_size = c(2,2)) %>% 
+    layer_dropout(rate = 0.4) %>% 
+    layer_conv_2d(filters = 16,
+                  kernel_size = c(3, 3),
+                  activation = 'relu') %>%
+    layer_max_pooling_2d(pool_size = c(2,2)) %>% 
+    layer_flatten() %>% 
+    layer_dense(units = 256, activation = 'relu') %>%
+    layer_dense(units = 64, activation = 'relu') %>%
+    layer_dense(units = 12, activation = 'softmax') %>% 
+    keras::compile(optimizer = 'adam',
+                   loss = 'sparse_categorical_crossentropy',
+                   metrics = c("acc"))
+}
+```
+
+## Model Training
+
+```{r}
+dnn_cnn_model <- create_cnn_model()
+history <- dnn_cnn_model %>% 
+  fit(X_train_reshaped, y_train, 
+      validation_split = 0.2,
+      epochs = 50)
+plot(history,
+     smooth = F)
+
+```
+
+We save the model, so that we don't have to run it again.
+
+```{r}
+save_model_hdf5(object = dnn_cnn_model, filepath = "./models/dnn_cnn_snake.h5")
+dnn_cnn_model %>% summary()
+```
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Make Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+```{r}
+# prepare resulting dataframe with predicted and actual labels
+test_check <- tibble(label_pred = NA,
+                      label_act = y_test %>% 
+  gsub(pattern = "n", replacement = ""))
+n_valid <- dim(X_test)[1]
+for (id_curr in 1:n_valid) {
+  test_image <- array(X_test_reshaped[id_curr,,, ], dim = c(1, n_max, n_max, 1))
+  predictions <- dnn_cnn_model %>% 
+    predict(test_image)
+  label_pred <-which.max(predictions)-1
+  test_check$label_pred[id_curr] <- label_pred
+}
+```
+
+## Baseline Classifier
+
+```{r}
+tab_act <- table(test_check$label_act)
+max(tab_act) / sum(tab_act) * 100
+```
+
+If we assign all "predictions" to the most frequent class, we get an accuracy of 15.5 %. This is what our algorithm should exceed to be useful.
+
+## Confusion Matrix
+
+```{r}
+cm_tab <- table(factor(test_check$label_pred, levels = 0:11), 
+                factor(test_check$label_act, levels = 0:11))
+pheatmap(cm_tab, 
+         cluster_rows = F, 
+         cluster_cols = F, 
+         display_numbers = T )
+```
+
+We use function **confusionMatrix()** from caret package and pass actual and predicted labels.
+
+```{r}
+caret::confusionMatrix(as.factor(test_check$label_pred),
+                       as.factor(test_check$label_act))
+```
+
+We achieve quite a good accuracy with 82.6 %. This can be increased by using much more data. Other kernels on Kaggle show that an accuracy up to 99.x % is possible. So if you have a powerful GPU, use more data. If not, play with parameters and tune them to achieve higher accuracy.

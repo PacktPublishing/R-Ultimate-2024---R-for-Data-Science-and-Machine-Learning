@@ -1,0 +1,146 @@
+---
+title: "Logistic Regression Solution"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+We will create a Credit Approval model. More information can be found at this [link](http://archive.ics.uci.edu/ml/datasets/credit+approval).
+
+We will predict whether an applicant received a credit.
+
+## Data Import
+
+Import the file to an object called "credit_approval".
+
+```{r}
+credit_approval <- readRDS("./data/CreditApproval.RDS")
+```
+
+# Data Preparation
+
+## Packages
+
+We load required packages.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(keras))
+suppressPackageStartupMessages(library(caret))
+suppressPackageStartupMessages(library(e1071))
+
+source("./functions/train_val_test.R")
+```
+
+In tutorial on missing data handling, this dataset was prepared and missing data was taken care of.
+
+```{r}
+credit_approval %>% summary()
+```
+
+The class attribute has values "-" and "+" which will be transformed to 0 and 1.
+
+```{r}
+credit_approval <- credit_approval %>% 
+  dplyr::mutate(Approved = ifelse(Approved == "+", 1, 0)) %>%
+  dplyr::mutate(Income = log(Income))
+
+credit_approval$Income[is.infinite(credit_approval$Income)] <- 0
+
+```
+
+We check that we have the same distribution as before.
+
+```{r}
+credit_approval$Approved %>% table()
+```
+
+We change type of "Approved" to factor.
+```{r}
+credit_approval$Approved <- as.factor(credit_approval$Approved)
+```
+
+
+## Train / Validation Split
+
+For simplicity we will only split into training and validation
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = credit_approval, train_ratio = 0.8, val_ratio = 0.2, test_ratio = 0)
+```
+
+
+# Modeling
+
+```{r}
+model_logreg <- glm(data = train, 
+                    Approved ~ .,
+                    family = "binomial")
+model_logreg
+```
+
+# Predictions
+
+Please calculate predictions for a threshold of 0.5?
+
+```{r}
+train$Approved_pred_prob <- predict(object = model_logreg, 
+                             newdata = train, 
+                             type = "response")
+
+val$Approved_pred_prob <- predict(object = model_logreg, 
+                             newdata = val, 
+                             type = "response")
+
+threshold <- 0.5
+train$Approved_pred <- ifelse(train$Approved_pred_prob > threshold, "1", "0")
+val$Approved_pred <- ifelse(val$Approved_pred_prob > threshold, "1", "0")
+```
+
+# Model Performance
+
+## Baseline Performance 
+
+Please calculate the accuracy, if always the most frequent class is predicted!
+
+```{r}
+max(table(train$Approved)) / sum(table(train$Approved)) * 100
+```
+
+
+## Confusion Matrix
+
+```{r}
+conf_mat_train <- table(predicted = train$Approved_pred, actual = train$Approved)
+
+conf_mat_val <- table(predicted = val$Approved_pred, actual = val$Approved)
+conf_mat_val
+```
+
+```{r}
+caret::confusionMatrix(factor(train$Approved_pred), train$Approved)
+caret::confusionMatrix(factor(val$Approved_pred), val$Approved)
+```
+
+Here you can see many important model performance metrics on one glance.
+
+Accuracy is 88 %, which is quite good.
+
+Prior default has the highest importance of all features.
+
+# Acknowledgement
+
+We thank the provider of the dataset.
+
+(confidential source)
+
+Submitted by quinlan '@' cs.su.oz.au

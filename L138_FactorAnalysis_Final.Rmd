@@ -1,0 +1,265 @@
+---
+title: "Factor Analysis"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(knitr)
+library(psych)
+library(corrplot)
+library(GPArotation)
+library(reshape2)
+library(gridExtra)
+```
+
+
+# Introduction
+
+Exploratory factor analysis is performed to find a lower number of unobserved variables (factors) in a larger number of correlated variables. It is a statistical technique for dimension reduction. We will analyse “forest fires” dataset.
+
+# Data Preparation and -understanding 
+
+This dataset is usually used for prediction of forest fires based on meteorological data. We will use it to see which variables are related and might be driven by unobservable factors.
+
+We start by loading data from online resource, to be found at specified url. Factor analysis requires numeric input, so we transform “month” and “day” to a numeric type.
+
+## Data Import
+
+```{r}
+file_name <- "./data/fires.csv"
+if (!file.exists(file_name)) {
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/forest-fires/forestfires.csv"
+  download.file(url = url, destfile = file_name)
+}
+
+fires <- read.csv(file = file_name)
+```
+
+## Data Manipulation
+
+```{r}
+fires$month <- as.numeric(fires$month)
+fires$day <- as.numeric(fires$day)
+```
+
+## Data Understanding
+
+```{r}
+fires %>% head() %>% kable()
+```
+
+Some variables might require some explanation. Some FWI (Fire Weather Index) variables are used.
+
+- FFMC: Fine Fuel Moisture Code – moisture content of surface litter
+
+- DMC: Duff Moisture Code – rating for average moisture content of loosely connected organic layers
+
+- DC: Drought Code – moisture content of deep, compact, organic layers
+
+- ISI: Initial Spread Index – rate of fire spreading at its beginning
+
+Which of these variables are relevant? 
+
+## Relevant Variables
+
+Kaiser-Meyer-Olkin (KMO) test can be performed to answer this question. Function KMO() from psych package checks if a variable is suitable for factor analysis.
+
+```{r}
+fires_corr <- cor(fires)
+KMO(fires_corr)
+```
+
+MSA (measure of sampling adequacy) is a measure for exclusion of variables. If MSA < 0.5 the variable should be dropped. Variables with MSA > 0.6 are suitable, variables with MSA > 0.8 very well suited for factor analysis.
+
+The result tells us to drop “month”, relative humidity “RH”, and “rain”.
+
+With residual variables we calculate correlation matrix with cor().
+
+```{r}
+fires$month <- NULL
+fires$RH <- NULL
+fires$rain <- NULL
+fires_corr <- cor(fires)
+round(fires_corr, 2) %>% corrplot.mixed()
+```
+
+# Factor Analysis
+
+We perform factor analysis. At this stage we don’t know how many factors should be used. We will start with three. We can check our assumption at a later stage. Factor analysis will be performed with fa() function from psych package. As parameters are passed: a correlation matrix, the number of factors, and a rotation. The last parameter can increase factor loadings, but don’t have an impact on the result, if rotation is orthogonal. If rotation is oblique, factors themselfes are correlated. “Oblimin” is an oblique rotation.
+
+```{r}
+nfactors <- 3
+nvariables <- dim(fires_corr)[1]
+factors <- fa(r = fires_corr, nfactors = nfactors, rotate = "oblimin")
+```
+
+## Eigenvalues and Explained Variance
+
+We will create a Scree-plot. It shows Eigenvalues and cumulated explained variance as a function of number of factors. The red line represents Kaiser-criterion, which means that the number of factors should be chosen so that Eigenvalues are above one.
+
+For visualisation I use gplot2 package. We create a dataframe “eigenvalues” based on variable “e.values” within “factors” variable.
+
+Explained variance is calculated with ratio of cumulated Eigenvalues to total sum of Eigenvalues.
+
+Plot is stored in “e1” variable. 
+
+```{r}
+eigenvalues <- data.frame(factors$e.values)
+colnames(eigenvalues) <- c("Values")
+eigenvalues$Number <- 1:nrow(fires_corr)
+
+eigenvalues$RepresentedVariance <- NA
+for (i in 1:nrow(fires_corr)) {
+    eigenvalues$RepresentedVariance[i] <- sum(eigenvalues$Values[1:i])/sum(eigenvalues$Values) * 
+        100
+}
+eigenvalues$RepresentedVariance_text <- paste(round(eigenvalues$RepresentedVariance, 
+    0), " %")
+
+e1 <- ggplot(eigenvalues, aes(Number, y = Values), group = 1)
+e1 <- e1 + geom_bar(stat = "identity")
+e1 <- e1 + geom_line(aes(y = Values), group = 2)
+e1 <- e1 + xlab("Number [-]")
+e1 <- e1 + ylab("Eigenvalue [-]")
+e1 <- e1 + geom_hline(aes(yintercept = 1), col = "red")
+e1 <- e1 + geom_text(aes(label = RepresentedVariance_text), nudge_y = 0.2)
+e1 <- e1 + ggtitle("Eigenvalues and explained Variance")
+e1 <- e1 + theme_bw()
+e1 <- e1 + scale_x_continuous(breaks = seq(1, 10, 1))
+e1
+```
+
+In our case it is a tough decision. Three factors is definitely a possible solution. Four our five are also arguable. I decide to use three factors.
+
+The number of factors might also be chosen based on a number of other criteria or even defined by the user based on model knowledge.
+
+## Factor Loadings: Factor 1 vs. Factor 2
+
+We will create a plot that shows factor loadings for factor 1 and factor 2 for all variables. We load dplyr and tidyr package.
+
+A loadings matrix template is created with as many rows as variables and as many columns as factors. Loadings are stored in “factors$loadings”. With nested for-loops loadings are extracted and stored in loadings matrix.
+
+Finally, column names are defined and dataframe is reshaped to be suitable for ggplot.
+
+```{r}
+loadings_mat <- as.data.frame(matrix(nrow = nvariables, ncol =nfactors))
+loadings_mat$Variable <- colnames(fires)
+for (i in 1:nfactors) {
+  for (j in 1:nvariables) {
+    loadings_mat[j, i] <- factors$loadings[j, i]  
+  }
+}
+colnames(loadings_mat) <- c("Factor1", "Factor2", "Factor3", "Variable")
+loadings_mat_gather <- loadings_mat %>% gather("Factor", "Value", 1:nfactors)
+```
+
+Now we create the plot.
+
+```{r}
+loadings_mat$Zero <- 0
+f1 <- ggplot(loadings_mat, aes(Zero, Zero))
+f1 <- f1 + geom_segment(aes(xend = Factor1, yend=Factor2), 
+                        arrow = arrow(length = unit(0.3,"cm")), col="red")  # Variables
+f1 <- f1 + geom_text(aes(x = Factor1, y = Factor2, label = Variable))  # Labels
+f1 <- f1 + geom_segment(aes(xend = 1, yend=0), 
+                        arrow = arrow(length = unit(0.3,"cm")), col="black")  # X-Axis
+f1 <- f1 + geom_segment(aes(xend = 0, yend=1), 
+                        arrow = arrow(length = unit(0.3,"cm")), col="black")  # X-Axis
+f1 <- f1 + xlab("Factor 1")
+f1 <- f1 + ylab("Factor 2")
+f1 <- f1 + ggtitle("Factor Loadings")
+f1 <- f1 + theme_bw(base_size=12)
+f1 <- f1 + theme(legend.position="none")
+f1
+```
+
+What can we learn from this plot? Variable “DC” loads strongly on Factor1 and hardly on Factor2. On the contrary, variable “Y” loads strongly on Factor2, but hardly on Factor1. This kind of plot is reasonable for two factors. It also works for three factors, but definitely won’t work for more than three factors. So we will use a different kind of plot to show relationship of factors and variables.
+
+## Factors Loadings: Factors and Variables
+
+I won’t go into detail on how this graph is created. We will focus on its meaning.
+
+```{r}
+g1 <- ggplot(loadings_mat_gather, aes(Variable, abs(Value), fill=Value))
+g1 <- g1 + facet_wrap(~ Factor, nrow=1)
+g1 <- g1 +geom_bar(stat="identity")
+g1 <- g1 + coord_flip()
+g1 <- g1 + scale_fill_gradient2(name = "Loading", 
+                       high = "blue", mid = "white", low = "red", 
+                       midpoint=0, guide=F) 
+g1 <- g1 + xlab("Variable")  # improve x-axis label
+g1 <- g1 + ylab("Factor Loading")  #improve y-axis label
+g1 <- g1 + ggtitle("Factors")
+g1 <- g1 + theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=12, face="bold"))
+g1 <- g1 + theme(plot.title = element_text(size=12))
+g1 <- g1 + theme_bw(base_size=12)
+g1
+```
+
+You see factor loadings for all three factors and each variable.
+
+- DC, DMC, temp and wind define Factor 1
+
+- X and Y load on Factor 2
+
+- Primarily ISI and FFMC load on Factor 3
+
+## Correlation Matrix and Factor Loadings
+
+We will need packages reshape2 and gridExtra.
+
+At the end we will show two plots: a reduced correlation matrix and factor loadings.
+
+We create a reduced correlation matrix. It has at its diagonal communalities, which are extracted from “factors$communality”. With melt() function from reshape2 package it is brought into a shape to work smoothly with ggplot().
+
+```{r}
+corr_reduced <- fires_corr
+for (i in 1: nvariables) {
+  corr_reduced[i, i] <- factors$communality[i]
+}
+
+corr_melt <- corr_reduced %>% melt()
+corr_melt <- corr_melt[order(corr_melt$Var2), ]
+p1 <- ggplot(corr_melt, aes(Var1, Var2, fill=abs(value))) 
+p1 <- p1 + geom_tile()  #rectangles for each correlation
+p1 <- p1 + geom_text(aes(label = round(value, 2)), size=4) 
+  #add actual correlation value in the rectangle
+p1 <- p1 + theme_bw(base_size=10)  #black and white theme with set font size
+  #rotate x-axis labels so they don't overlap, 
+  #get rid of unnecessary axis titles
+  #adjust plot margins
+p1 <- p1 + theme(axis.text.x = element_text(angle = 90), 
+        axis.title.x=element_blank(), 
+        axis.title.y=element_blank(), 
+        plot.margin = unit(c(3, 1, 0, 0), "mm")) 
+  #set correlation fill gradient
+p1 <- p1 + scale_fill_gradient(low="white", high="red") + guides(fill=F) 
+  #omit unnecessary gradient legend
+
+p2 <- ggplot(loadings_mat_gather, aes(Variable, abs(Value), fill=Factor))
+p2 <- p2 + geom_bar(stat="identity") + coord_flip()  
+p2 <- p2 + ylab("Factor Loading") 
+p2 <- p2 + theme_bw(base_size=12) 
+#remove labels and tweak margins for combining with the correlation matrix plot
+p2 <- p2 +theme(axis.text.y = element_blank(), 
+        axis.title.y = element_blank(), 
+        plot.margin = unit(c(3, -5, -2, 3), "mm"))
+grid.arrange(p1, p2, ncol=2, widths=c(2, 1)) #side-by-side, matrix gets more space
+```
+
+You see which variables have a strong loading and on which factors they load.

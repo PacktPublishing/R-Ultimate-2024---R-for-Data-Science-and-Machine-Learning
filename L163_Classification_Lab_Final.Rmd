@@ -1,0 +1,231 @@
+---
+title: "Binary Classification - Lab"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Data Understanding
+
+We will work on spam emails.
+
+More details from UCI ML repository:
+
+The "spam" concept is diverse: advertisements for products/web sites, make money fast schemes, chain letters, pornography... 
+
+Our collection of spam e-mails came from our postmaster and individuals who had filed spam. Our collection of non-spam e-mails came from filed work and personal e-mails, and hence the word 'george' and the area code '650' are indicators of non-spam. These are useful when constructing a personalized spam filter. One would either have to blind such non-spam indicators or get a very wide collection of non-spam to generate a general purpose spam filter. 
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/spam.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+spam <- read.csv(file_path, sep = ",", header = F)
+```
+
+# Data Preparation
+
+## Packages
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(keras))
+suppressPackageStartupMessages(library(caret))
+
+source("./functions/train_val_test.R")
+```
+
+
+## Column Names
+
+We need to set column names correctly.
+
+```{r}
+colnames(spam) <- c("word_freq_make","word_freq_address","word_freq_all","word_freq_3d","word_freq_our","word_freq_over","word_freq_remove","word_freq_internet","word_freq_order","word_freq_mail","word_freq_receive","word_freq_will","word_freq_people","word_freq_report","word_freq_addresses","word_freq_free","word_freq_business","word_freq_email","word_freq_you","word_freq_credit","word_freq_your","word_freq_font","word_freq_000","word_freq_money","word_freq_hp","word_freq_hpl","word_freq_george","word_freq_650","word_freq_lab","word_freq_labs","word_freq_telnet","word_freq_857","word_freq_data","word_freq_415","word_freq_85","word_freq_technology","word_freq_1999","word_freq_parts","word_freq_pm","word_freq_direct","word_freq_cs","word_freq_meeting","word_freq_original","word_freq_project","word_freq_re","word_freq_edu","word_freq_table","word_freq_conference","char_freq_;","char_freq_(","char_freq_[","char_freq_!","char_freq_$","char_freq_#","capital_run_length_average","capital_run_length_longest","capital_run_length_total", "target" 
+)
+```
+
+We check the summary of the data to see if there are missing values.
+
+```{r}
+spam[is.na(spam), ] %>% nrow()
+```
+
+```{r}
+str(spam$target)
+#spam$target <- as.factor(spam$target)
+```
+
+## Train / Validation / Test Split
+
+We split the data into train, validation, and test data.
+
+```{r}
+set.seed(123)
+c(train, val, test) %<-% train_val_test_split(df = spam, train_ratio = 0.8, val_ratio = 0, test_ratio = 0.2)
+```
+
+
+# Modeling
+
+The data will be transformed to a matrix.
+
+```{r}
+X_train <- train %>% 
+  select(-target) %>% 
+  as.matrix()
+y_train <- train %>% 
+  select(target) %>% 
+  as.matrix()
+
+X_test <- test %>% 
+  select(-target) %>% 
+  as.matrix()
+y_test <- test %>% 
+  select(target) %>% 
+  as.matrix()
+
+dimnames(X_train) <- NULL
+dimnames(X_test) <- NULL
+```
+
+## Data Scaling
+
+The data is scaled. This is highly recommended, because features can have very different ranges. This can speed up the training process and avoid convergence problems.
+
+```{r}
+X_train_scale <- X_train %>% 
+  scale()
+
+# apply mean and sd from train dataset to normalize test set
+col_mean_train <- attr(X_train_scale, "scaled:center") 
+col_sd_train <- attr(X_train_scale, "scaled:scale")
+
+X_test_scale <- X_test %>% 
+  scale(center = col_mean_train, 
+        scale = col_sd_train)
+```
+
+
+## Initialize Model
+
+We put all in one function, because we need to run it each time a model should be trained.
+
+```{r}
+create_model <- function() {
+  dnn_class_model <- 
+      keras_model_sequential() %>% 
+      layer_dense(units = 50, 
+              activation = 'relu', 
+              input_shape = c(ncol(X_train_scale))) %>% 
+    layer_dropout(rate = 0.4) %>% 
+    layer_dense(units = 50, activation = 'relu') %>% 
+    layer_dropout(rate = 0.4) %>% 
+          layer_dense(units = 1, activation = 'sigmoid') %>% 
+      compile(optimizer = 'adam',
+              loss = 'binary_crossentropy',
+              metrics = 'accuracy')
+}
+```
+
+We have a binary classifier - so we should use "binary_crossentropy"  as loss function.
+
+The output layer should be sigmoid. With this we get probabilities in the range of zero to one.
+
+
+## Model Fitting
+
+```{r eval=T}
+dnn_class_model <- create_model()
+history <- dnn_class_model %>% 
+  keras::fit(x = X_train_scale, 
+             y = y_train,
+             epochs = 30, 
+             validation_split = 0.2,
+             verbose = 0, 
+             batch_size = 128)
+plot(history,
+     smooth = F)
+```
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+```{r}
+y_test_pred <- predict(object = dnn_reg_model, x = X_test_scale)
+y_test_pred %>% table() %>% head()
+```
+
+
+## Check Performance
+
+```{r}
+test$target_pred <- y_test_pred[, 1]
+```
+
+We create correlation plots for our target variable.
+
+The predictions are probabilities, so we need to assign it according to a threshold.
+
+```{r}
+test <- test %>% 
+  mutate(target_pred_class = ifelse(target_pred < 0.5, 0, 1)) %>%   
+  mutate(target_pred_class = as.factor(target_pred_class)) %>% 
+  mutate(target = as.factor(target))
+
+cm_tab <- caret::confusionMatrix(test$target_pred_class, 
+                       test$target)
+cm_tab
+```
+
+We reach 93.5 % accuracy.
+
+Kappa is 0.87, which means that the model provides results much better than random chance.
+
+# Hyperparameter Tuning
+
+Now we could move forward and adapt 
+
+- network topology, 
+
+- count of layers, 
+
+- type of layers, 
+
+- count of nodes per layer, 
+
+- loss function, 
+
+- activation function, 
+
+- learning rate, 
+
+- and much more, ...
+
+Play around with the parameters and see how they impact the result.
+
+# Acknowledgement
+
+We thank the authors of the dataset:
+
+The dataset was created by Angeliki Xifara (angxifara '@' gmail.com, Civil/Structural Engineer) and was processed by Athanasios Tsanas (tsanasthanasis '@' gmail.com, Oxford Centre for Industrial and Applied Mathematics, University of Oxford, UK).

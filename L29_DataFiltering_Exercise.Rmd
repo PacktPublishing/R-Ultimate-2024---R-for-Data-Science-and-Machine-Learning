@@ -1,0 +1,50 @@
+---
+title: "Data Filtering: Exercise"
+author: "Bert"
+date: "18 März 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)
+library(babynames)
+```
+
+In this exercise you will work extensively on dplyr filtering and selection.
+
+# Data Preparation
+
+We will work with dataset "babynames" from the package with the same name.
+
+```{r}
+data("babynames")
+babynames %>% glimpse
+```
+
+# Filtering
+
+1. Filter for year 2015.
+
+2. Filter for all names that have a capital letter "B". Help: take a look at "str_detect()".
+
+3. Filter for male names.
+
+4. Take only names into account which have more than 100 observations.
+
+5. Show the Top 10 in decreasing order.
+
+6. Keep only the columns "name" and "prop"
+
+```{r}
+# code here
+```
+

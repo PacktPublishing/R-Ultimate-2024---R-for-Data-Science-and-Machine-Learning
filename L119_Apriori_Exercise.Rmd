@@ -1,0 +1,137 @@
+---
+title: "Apriori: Solution"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Data Preparation
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(arules))
+suppressPackageStartupMessages(library(arulesViz))
+```
+
+## Raw Data Import
+
+We use a public dataset on grocery store purchases, that you can download e.g. from here: (here)[http://www.salemmarafi.com/wp-content/uploads/2014/03/groceries.csv].
+
+This code downloads the data, if this was not done before.
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/groceries.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "http://www.salemmarafi.com/wp-content/uploads/2014/03/groceries.csv"
+  download.file(url = url, 
+                destfile = file_path)
+}
+```
+
+Now the data is imported.
+
+```{r}
+grocery <- read_delim(file = "./data/groceries.csv", 
+                 delim = ",", 
+                 quote = "\"", 
+                 skip = 0, 
+                 col_names = F,
+                 na = c("", "NA"), 
+                 progress = F)
+```
+
+## Transformation to Transactions
+
+Now we create a transactions-object based on this dataframe.
+
+We convert the object "grocery" to a matrix. Then convert to an object of type "transactions".
+
+```{r}
+m <- as.matrix(grocery)
+l <- lapply(1:nrow(m), FUN = function(i) (m[i, ]))
+transactions <- as(l, "transactions")
+transactions
+```
+# Model 
+
+Now we can work with our transactions object.
+
+## Item Frequency
+
+1. Please print the first item sets.
+
+```{r}
+# put your code here
+```
+
+2. Please create a graph showing the bestselling 10 items.
+
+```{r}
+# put your code here
+```
+
+## Cross Table
+
+The cross table shows joint occurences of items. 
+
+3. Please create a cross table for "beef", "bottled beer", and "canned beer".
+
+```{r}
+# put your code here
+```
+
+
+## Generate Rules
+
+4. Generate all rules with a minimum support of 0.001 and a confidence of 0.5!
+
+```{r}
+# put your code here
+```
+
+5. Show the rules, sorted by confidence.
+
+```{r}
+# put your code here
+```
+
+It is most probable to buy bottled beer, after liquor, red/blush wine, is purchased.
+
+6. Show the rules, sorted by lift.
+
+```{r}
+# put your code here
+```
+
+7. What is the highest achieved lift? Does this mean the rule is relevant (more likely than pure chance)?
+
+```{r}
+# put your code here
+```
+
+
+## Specific Rules for an Item
+
+8. Please create rules for coffee. You want to know, which items led to the purchase of coffee. Please use a support of 0.001 and a confidence of 0.1. Sort the results by "confidence".
+
+```{r}
+# put your code here
+```
+
+9. Visualise the rules with measure "lift" and shading set to "confidence".
+
+```{r}
+# put your code here
+```
+

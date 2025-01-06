@@ -1,0 +1,75 @@
+---
+title: "Outlier Detection: Exercise"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(dbscan)
+```
+
+
+# Introduction
+
+The data set you work with includes shapes, that are easily to distinguish for a human. Your task is to write an algorithm to detect the shapes with an algorithm.
+
+```{r}
+library(factoextra)
+data("multishapes")
+```
+
+```{r}
+g <- ggplot(multishapes, aes(x, y, col = as.factor(shape)))
+g <- g + geom_point()
+g
+```
+
+Hint: make use of dbcan for this exercise.
+
+# dbscan
+
+Create a matrix object of "multishapes".
+
+Create a kNNdistplot for 5 points.
+
+```{r}
+# code here
+```
+
+Use the plot to come up with a suitable epsilon parameter. 
+
+Then use dbscan to detect the clusters with this algorithm.
+
+```{r}
+# code here
+```
+
+
+Assign a new column in "multishapes" based on the clusters that were detected by dbscan.
+
+```{r}
+# code here
+```
+
+Plot the result.
+
+```{r}
+g <- ggplot(multishapes, aes(x, y, col = as.factor(dbscan_cluster)))
+g <- g + geom_point()
+g
+```
+
+Did your parameters lead to the right clusters? If not, change parameters and run it again.
+

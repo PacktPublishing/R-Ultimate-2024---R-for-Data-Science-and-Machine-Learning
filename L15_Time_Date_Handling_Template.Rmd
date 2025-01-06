@@ -1,0 +1,152 @@
+---
+title: "Time and Date Handling"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    highlight: tango
+    toc: true
+    fig_caption: true
+    toc_float:
+      collapsed: true
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+If you deal with datasets that contain date and time, these are usually imported as factors, which is not helpful for further processing. You need to apply some special measures to transform it to an R date object or to extract information like days, or hours. In this tuturial you will learn how this works.
+
+* Objectives: learning to create R-time objects (POSIX) from characters or factors, extract components from POSIX timestamp
+
+* Requirements: R Basics; _ggplot_ and _plyr_ might be helpful, but are not required
+
+# Data Import and Understanding
+
+We use "CalIt2 Building People Counts Data Set" from "UCI Machine Learning Repository". It includes observations on people flowing in or out of a building, measured over 15 weeks, half hour count aggregates.
+
+For analysis we need _dplyr_ package. _ggplot2_ is used for visualisation. Please make sure you have installed it before trying to load it. We can use tidyverse for this.
+
+```{r load_packages}
+library(tidyverse)
+library(lubridate)
+```
+
+"url" gets the http address of data. Data is downloaded with _read.csv()_. Column names are not included in the data, so we add this manually. Information on inflow or outflow is coded with numerics (7 for outflow, 9 for inflow). We create an additional column with corresponding information as string ("out" or "in"). Original "flow" column is deleted afterwards. Finally, we take a look at the data with _tbl_df()_ from _dplyr_ package.
+
+```{r import, cache=TRUE}
+url <- "http://archive.ics.uci.edu/ml/machine-learning-databases/event-detection/CalIt2.data"
+building <- read.csv(url, header = F)
+colnames(building) <- c("flow", "date", "time", "count")
+building$flow_str <- NA
+building$flow_str[building$flow == 7] <- "out"
+building$flow_str[building$flow == 9] <- "in"
+building$flow <- as.factor(building$flow_str)
+tbl_df(building)
+```
+There is a column "date" and a column "time". Both have the type factor. You can't use factor to plot a date or time information. You first need to convert it to a "POSIX" object.
+
+# Time and Date Conversion
+
+Information on date and time are stored in two separate columns, but it makes more sense to have it as a single timestamp, because it describes one unique timestamp. Thus, both columns are concatenated with _paste()_.
+```{r date_time}
+building$timestamp_chr <- paste(building$date, building$time)
+str(building$timestamp_chr)
+```
+
+The result is of type character, not helpful either, we will change this in the next step. But now we know which component of timestamp is stored at which position and what the separator is. R cannot know by itself which component is a year, and which one a month. This knowledge we need to explain to R in the next step.
+
+We found out that our timestamp has the following components: first month, then day, year, hour, minute, and second. With _as.POSIXct()_ we convert the characters to type "POSIXct". There is a special syntax you have to use.
+
+* **%m** for month
+
+* **%d** for day
+
+* **%y** for a year with two digits
+
+* **%Y** for a year with four digits
+
+* **%H** for hour
+
+* **%M** for minute
+
+* **%S** for second
+
+To create variable "timestamp" _as.POSIXct()_ function is called with "timestamp_chr" information and a format string. Format string defines order of components and separators in between. Here, we use "%m/%d/%y %H:%M:%S" for matching. Please make sure that each component is at the right place, as well as each separator, otherwise conversion will fail.
+```{r}
+# classical approach
+# code here
+
+# lubridate
+# code here
+
+```
+
+It worked. Column is of type "POSIXct" and timestamp information was captured correctly. 
+
+Let's take a look at in and outflow. To see some details, only the first 500 datasets are shown. Details of _ggplot()_ are not described here. If you are not familiar with _ggplot()_ please take a look at ggplot tutorial.
+
+```{r visualisation}
+g <- ggplot(building[1:500, ], aes(x = timestamp, y = count, color = flow))
+g <- g + geom_line()
+g
+```
+
+# Extract Timestamp Information
+
+We want to know how many people went in and out of the building in each hour of the day. For this, we need to extract "hour" from timestamp. We need to convert the timestamp (currently POSIXct) to POSIXlt format. With _unclass()_ components are extracted and stored in a named list. From this, "hour" is the information we need.
+
+```{r}
+# classical approach
+
+# code here
+
+# lubridate
+
+# code here
+
+```
+
+Other information in unclassed object are 
+
+* **sec** for seconds 
+
+* **min** for minutes
+
+* **mday** for monthday
+
+* **mon** for month (0 refers to January, 11 to December; so typically you need to add 1)
+
+* **year** for year
+
+* **yday** for day of the year
+
+* **isdst** for is daylight saving time (summer time)
+
+* **zone** for timezone
+
+* **gmtoff** for offset to GMT
+
+We are done with time and date handling at this point. If you are interested in diurnal flow, please read on.
+
+What is diurnal flow pattern? We can analyse it with _ddply()_ from _plyr_ package and visualise it with _ggplot_. 
+
+If you are not familiar with _ddply()_, here is a short explanation. Our data "building" is used as input. We create a summary for "hour" and "flow". For each combination of "hour" and "flow" data is splitted and a summary of following functions is created for the subgroup. We create a summary for "count", which is the sum of all counts in this group. The result is visualised with _ggplot()_.
+
+```{r}
+hour_flow <- building %>% 
+	group_by(hour, flow) %>% 
+  summarise(count = sum(count))
+
+g <- ggplot(hour_flow, aes(x = hour, y = count, color = flow))
+g <- g + geom_line()
+g <- g + scale_x_continuous(breaks = seq(0, 23, 1))
+g <- g+ theme_bw()
+g
+```
+
+Most people start working between 9AM and 10AM, and head home between 5 and 7PM. It is likely there is a canteen in the building since there is a spike of inflow around 1PM.
+
+# More Information
+
+* CalIt2 Building People Counts Data Set http://archive.ics.uci.edu/ml/datasets/CalIt2+Building+People+Counts

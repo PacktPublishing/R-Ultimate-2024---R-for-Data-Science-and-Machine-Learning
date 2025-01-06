@@ -1,0 +1,185 @@
+---
+title: "Deep Learning: CNN Exercise"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Business Understanding
+
+We will work on Snake Eyes dataset. You can find more information [here](https://www.kaggle.com/nicw102168/snake-eyes/home).
+
+It includes tiny images of dices.
+
+# Data Understanding
+
+The data format is csv, with records of 401 columns. The first column contains the class (1 to 12, notice it does not start at 0), and the other 400 columns are the image rows. Each file consists of 100k images. There is an extra test set with 10,000 images.
+
+## Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(pheatmap)
+library(keras)
+```
+
+
+# Data Preparation
+
+Please import all files, stored under subfolder "data_CNN_exercise", and assign it to a dataframe, called "snake_eyes".
+
+The data is stored in 10 different files. Each of them has 401 columns. The first represents the target variable "dice sum". The columns two to 401 represent the image.
+
+For simplicity we import only the first file. Save it as "SnakeEyes.RDA".
+
+```{r}
+# please put your code here
+```
+
+If the data import is too complicated or you rather want to focus on Machine Learning related issues, you can start from here.
+
+- Load "SnakeEyes.RDA" from the current working directory. 
+
+```{r}
+# please put your code here
+```
+
+- Only keep the first 10000 lines (for faster training)
+
+```{r}
+# please put your code here
+```
+
+- Assign the first column of "snake_eyes" to an object called "y_train". 
+
+```{r}
+# please put your code here
+```
+
+- Assign the second to 401st column of "snake_eyes" to an object "X_train".
+
+```{r}
+# please put your code here
+```
+
+
+```{r}
+y_train %>% table()
+y_test %>% table()
+```
+
+
+Take a look at the summary of one column, e.g. "V28". What are the min and max values?
+
+```{r}
+# please put your code here
+```
+
+The training and test data has a range from 0 to 255.
+
+Please modify the data so that the data ranges from 0 to 1! Check the same column to see if it worked.
+
+```{r}
+# please put your code here
+```
+
+
+Visualise a sample image, e.g. image number 20 with a visualisation of your choice!
+
+I use "pheatmap()".
+
+```{r}
+# please put your code here
+```
+
+
+You can see one dice with with diagonals loaded. This represents a two!
+
+## Data Reshaping
+
+We need to rearrange our training and validation data to make it work with CNN.
+
+```{r}
+# please put your code here
+```
+
+
+
+# Model
+
+## Layer Setup and Model Configuration
+
+```{r}
+# please put your code here
+```
+
+
+## Model Training
+
+```{r}
+# please put your code here
+```
+
+
+Please save the model, so that we don't have to run it again. Use the name "dnn_cnn_snake.h5"
+
+Show the summary of the model.
+
+```{r}
+# please put your code here
+```
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Make Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+Please create predictions for all images in "X_test". Get the prediction probabilities and find the most likely class.
+
+```{r}
+# please put your code here
+```
+
+## Baseline Classifier
+
+Calculate what accuracy a baseline classifier could achieve!
+
+```{r}
+# please put your code here
+```
+
+If we assign all "predictions" to the most frequent class, we get an accuracy of 15.5 %. This is what our algorithm should exceed to be useful.
+
+## Confusion Matrix
+
+Create a confusion matrix.
+
+```{r}
+# please put your code here
+```
+
+Please use function **confusionMatrix()** from caret package and pass actual and predicted labels. What is overall test accuracy?
+
+```{r}
+# please put your code here
+```
+
+What other measures could you take to improve model quality?
+
+```{r}
+# please put your code here
+```
+
