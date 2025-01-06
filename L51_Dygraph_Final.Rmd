@@ -1,0 +1,88 @@
+---
+title: 'Dynamic Timeseries Plotting'
+author: "Bert Gollnick"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+We will directly download gold and silver price data to R with _quantmod_ package and create a dynamic plot with _dygraphs_.
+
+* Objectives: basic use of _quantmod_ and _dygraphs_
+
+* Requirements: R Basics
+
+# Data Download and Understanding
+
+We begin by loading required packages: _quantmod_ and _dygraphs_. You can install _quantmod_ with basic _install.packages()_ from CRAN. As of date of writing you need to install _dygraphs_ directly from github. For this you can use the function call below. After installing it once, you can load it.
+
+```{r libraries}
+library(quantmod)
+#devtools::install_github(c("ramnathv/htmlwidgets", "rstudio/dygraphs"))  # run once for install
+library(dygraphs)
+```
+
+Now we download data. This is done with _getMetals()_ from _quantmod_ package. Metals are passed as a vector with ticker names for metals. "From" is supposed to be the start of the period, but only the last 5 years are provided as we will see. So this parameter is partially ignored, but if you don't set it a much shorter period is provided.
+
+For each of these metals an xts-object is stored. These objects are combined with cbind to one single xts-object.
+
+```{r download_data, cache=T}
+quantmod::getMetals(Metals = c('XAU', 'XAG', 'PALL', 'PL'),
+	  from="2000-01-01",
+	  to = Sys.Date())
+
+metals <- cbind(XAGUSD, XAUUSD, XPDUSD, XPTUSD)
+```
+
+# Dynamic Plot
+
+Let's skip the first line. We will come to that later.
+
+Plot is created with _dygraph()_ function. Similar to _ggplot()_ you start with basic information on dataframe, and then put more aesthetics on top. Most importantly "data" is passed. It has to be a timeseries xts-object. Some general information title, x- and y-label can be passed as well. More definitions on how the plot should look and feel can be added with piping "%>%".
+
+With _dyRebase()_ all prices are referenced to 100 at beginning of period. 
+
+_dyRangeSelector()_ defines highlighted area. Plot can be extended to other periods with slider at the bottom of the page.
+
+```{r dygraph}
+dy_window <- c("2022-06-20", "2022-10-20")
+
+dygraph(data = metals, 
+	xlab = "Time", 
+	ylab = "Price [-]",
+	main = "Gold, Silver, Platin and Palladium Performance") %>%
+	dyRebase(value = 100) %>% 
+	dyRangeSelector(dateWindow = dy_window)
+```
+
+This plot is very dynamic. You can modify time range by changing start or end, or moving with a fixed period. Specific areas can be zoomed in by clicking on the graph. If you want to unzoom just double-click in the graph. Prices are always shown for current position at the top of the plot.
+
+All metals increased prices since September 2018, Palladium by more than 60 %. But this picture changes when period is extended to the last 5 years.
+
+# Linked Plots
+
+```{r}
+dygraph(XAGUSD, group = "linked") %>% 
+  dyRangeSelector(dateWindow = dy_window)
+
+dygraph(XAUUSD, group = "linked") %>% 
+  dyRangeSelector(dateWindow = dy_window)
+
+```
+
+
+# More Information
+
+There is more to discover. Take a look at these websites to learn more about financial modeling with _quantmod_ or dynamic timeseries plotting with _dygraphs_.
+
+* Quantmod Package http://www.quantmod.com/
+
+* Dygraphs Package https://rstudio.github.io/dygraphs/
+
+

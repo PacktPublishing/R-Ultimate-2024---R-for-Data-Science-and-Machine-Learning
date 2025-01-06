@@ -1,0 +1,94 @@
+---
+title: "Dbscan"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F)
+```
+
+# Data Preparation
+
+We will create a dataset, that consists of a circle in the center and a ring that surrounds the inner circle.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dbscan))
+```
+
+
+```{r}
+set.seed(123)
+n_points <- 4000
+
+df <- tibble(x = runif(n = n_points, min = -10, max = 10),
+             y = runif(n = n_points, min = -10, max = 10),
+             z = x^2+y^2) %>% 
+  mutate(class = ifelse(z < 10, "A", "B")) %>% 
+  mutate(class = as.factor(class)) %>% 
+  filter((z <10) | (z > 80 & z < 100))
+```
+
+Let's visualise the data.
+
+```{r}
+g <- ggplot(df, aes(x, y, col = class))
+g <- g + geom_point()
+g
+```
+
+# Modeling: dbscan
+
+We start the modeling.
+
+At first we transform the dataframe to a matrix.
+
+```{r}
+df_mat <- as.matrix(df[, 1:2])
+```
+
+We need to get an estimate of eps parameter.
+
+```{r}
+kNNdistplot(df_mat, k = 9)
+```
+
+For epsilon you choose the maximum value which has a low slope. 
+
+It still requires some manual adaptation to find the optimum set of parameters.
+
+```{r}
+epsilon <- 0.9
+min_points <- 9
+
+dbscan_result <- dbscan(x = df_mat, 
+                        eps = epsilon, 
+                        minPts = min_points)
+
+df$cluster <- dbscan_result$cluster
+
+g <- ggplot(df, aes(x, y, col = factor(cluster)))
+g <- g + geom_point()
+g
+```
+
+# Modeling: kmeans
+
+Just for comparison we perform kmeans to see how this performs on this dataset.
+
+```{r}
+kmeans_cluster <- kmeans(x = df[, 1:2], centers = 2)
+df$cluster_kmeans <- kmeans_cluster$cluster
+g <- ggplot(df, aes(x, y, col = factor(cluster_kmeans)))
+g <- g + geom_point()
+g
+```
+
+

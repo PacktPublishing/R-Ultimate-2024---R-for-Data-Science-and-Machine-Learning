@@ -1,0 +1,223 @@
+---
+title: "Support Vector Machines Exercise"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+We will work on heart diseases. On UCI Machine Learning Repository you find "Heart Disease" (dataset)[https://archive.ics.uci.edu/ml/datasets/Heart+Disease].
+
+This database contains 76 attributes, but all published experiments refer to using a subset of 14 of them. In particular, the Cleveland database is the only one that has been used by ML researchers to 
+this date. The "goal" field refers to the presence of heart disease in the patient. It is integer valued from 0 (no presence) to 4. Experiments with the Cleveland database have concentrated on simply attempting to distinguish presence (values 1,2,3,4) from absence (value 0). 
+
+
+These are the attribute information:
+
+1. age
+2. sex
+3. cp
+4. trestbps
+5. chol 
+6. fbs
+7. restecg
+8. thalach
+9. exang
+10. oldpeak
+11. slope
+12. ca
+13. thal
+14. target
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/heart_disease.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
+  download.file(url = url, 
+                destfile = file_path)
+}
+```
+
+Import the file to an object called "heart_raw".
+
+```{r}
+# place your code here
+```
+
+# Data Preparation
+
+## Packages
+
+We load required packages.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(keras))
+suppressPackageStartupMessages(library(caret))
+suppressPackageStartupMessages(library(e1071))
+
+source("./functions/train_val_test.R")
+```
+
+## Column Names
+
+Assign the column names correctly. Use these names:
+
+age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak,  slope, ca, thal, target
+
+
+```{r}
+# place your code here
+```
+
+How many levels of target-variables are present?
+
+```{r}
+# place your code here
+```
+
+Is this a classification or regression task? We will treat it as classification, but I want you to think about it.
+
+```{r}
+# Think about the task!
+```
+
+## Summary
+
+Check the summary of the data to see if there are missing values. Are there any missing?
+
+```{r}
+# place your code here
+```
+
+## Variable Type Correction
+
+Some numerical attributes were wrongly assigned to factors and vice versa. Check the repository description which features were wrongly assigned and correct it.
+
+You would have to check data description. I save you some time.
+
+- to factor:sex, cp, fbs, restecg, exang, slope, thal, target
+
+- to numeric: ca
+
+Don't modify the raw data. Instead create a new object "heart_mod", in which you perform the changes.
+
+```{r}
+# place your code here
+```
+
+
+Filter for values for "?" on "thal"-variable, because no information is available at these positions.
+
+```{r}
+# place your code here
+```
+
+
+## Train / Validation / Test Split
+
+Split the data into train, validation, and test data. Use splitting ratios of 80% training, 20% validation.
+
+```{r}
+# place your code here
+```
+
+
+# Modeling 
+
+## Model Creation
+
+Create a Support Vector Machines model for target-variable. Take all other parameters into account.
+
+```{r}
+# place your code here
+```
+
+# Predictions
+
+Create predictions for train, and validation data. These will be probabilities.
+
+```{r}
+# place your code here
+```
+
+
+# Model Performance
+
+We will compare our classifier to the baseline classifier.
+
+## Baseline Classifier
+
+Please calculate the baseline classifier (assignment to most frequent class). 
+
+Hint: Now you have more than two classes, but the procedure is the same.
+
+```{r}
+# place your code here
+```
+
+## Confusion Matrix
+
+Calculate a confusion matrix for Training Data:
+
+```{r}
+# place your code here
+```
+
+Calculate a confusion matrix for Validation Data:
+
+```{r}
+# place your code here
+```
+
+Calculate the Accuracy from the confusion matrix (for training and validation data).
+
+```{r}
+# place your code here
+```
+
+Is our classifier superior to baseline classifier?
+
+```{r}
+# put your code here
+```
+
+# Hyperparameter Tuning
+
+Create models for a range of cost-parameters.
+
+Hint: Inspect tune.svm() function from **e1071** package. Provide a range for parameters cost and gamma. Find the best parameter set and create a new model with these parameters.
+
+Hint: You modified training and validation dataset. Think whether you can take all variables into account or if you need to drop some.
+
+Calculate confusion matrices and get accuracies.
+
+```{r}
+# place your code here
+```
+
+# Acknowledgement
+
+We thank the creators and authors of the dataset.
+
+Creators: 
+
+1. Hungarian Institute of Cardiology. Budapest: Andras Janosi, M.D. 
+2. University Hospital, Zurich, Switzerland: William Steinbrunn, M.D. 
+3. University Hospital, Basel, Switzerland: Matthias Pfisterer, M.D. 
+4. V.A. Medical Center, Long Beach and Cleveland Clinic Foundation: Robert Detrano, M.D., Ph.D. 
+
+Donor: 
+
+David W. Aha (aha '@' ics.uci.edu) (714) 856-8779

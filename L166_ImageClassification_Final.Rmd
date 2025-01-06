@@ -1,0 +1,275 @@
+---
+title: "Deep Learning: Multi-Label Classification"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Business Understanding
+
+You will create an image classifier for monkey species. You find more information [here](https://www.kaggle.com/slothkong/10-monkey-species).
+
+# Data Understanding
+
+The dataset consists of two files, training and validation. Each folder contains 10 subforders labeled as n0~n9, each corresponding a species form Wikipedia's monkey cladogram. Images are 400x300 px or larger and JPEG format (almost 1400 images). Images were downloaded with help of the googliser open source code.
+
+The data has these attributes:
+
+- n0, alouatta_palliata
+
+- n1, erythrocebus_patas
+
+- n2, cacajao_calvus 
+
+- n3, macaca_fuscata   
+
+- n4, cebuella_pygmea
+
+- n5, cebus_capucinus
+
+- n6, mico_argentatus
+
+- n7, saimiri_sciureus 
+
+- n8, aotus_nigriceps
+
+- n9, trachypithecus_johnii
+
+# Data Preparation
+
+We load required packages.
+
+## Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(jpeg)
+library(OpenImageR)
+library(keras)
+```
+
+## Load Data
+
+We load the data.
+
+```{r}
+training_files <- list.files(path = "./data_raw/training/", 
+                             recursive = T)
+validation_files <- list.files(path = "./data_raw/validation/", 
+                             recursive = T)
+```
+
+## Example File
+
+We start with an example file.
+
+```{r}
+image_file <- paste0("./data_raw/training/", training_files[1])
+image_jpg <- jpeg::readJPEG(image_file)
+image_i <- resizeImage(image = image_jpg[,,1], 150, 150)
+image_i <- image_i %>% as.data.frame()
+colnames(image_i) <- seq_len(ncol(image_i))
+image_i$y <- seq_len(nrow(image_i))
+image_i <- gather(data = image_i, key = "x", value = "value", -y)
+image_i$x <- as.integer(image_i$x)
+
+```
+
+We visualise the result.
+
+```{r}
+g <- ggplot(image_i, aes(x = x, y = y, fill = value))
+g <- g + geom_tile()
+g <- g + scale_y_reverse() 
+g <- g + scale_fill_gradient(low = "white", high = "black", na.value = NA)
+g <- g + theme_minimal()
+g <- g + theme(panel.grid = element_blank(),
+               aspect.ratio = 1)
+g
+```
+
+## Creating Training / Validation Dataset
+
+Now, we saw it works, so we import all data. At first the training data.
+
+```{r}
+# n_max <- 150
+# n_files <- length(training_files)
+# train_images <- array(dim = c(n_files, n_max, n_max))
+# train_labels <- rep(NA, n_files) 
+# 
+# 
+# for (i in 1:n_files) {
+#   image_file <- paste0("./data_raw/training/",
+#                        training_files[i])  
+#   image_jpg <- jpeg::readJPEG(image_file)
+#   image_i <- resizeImage(image = image_jpg[,,1], n_max, n_max)
+#     train_images[i,, ] <- array(image_i, dim=c(1,n_max,n_max))
+#     train_label_temp <- training_files[i] %>% strsplit("\\/") %>% unlist()
+#     
+#     train_labels[i] <- train_label_temp[1]
+#     
+#   print(i)
+# }
+# 
+# save(train_images, train_labels, file = "TrainData.RDA")
+# load("./data_processed/TrainData.RDA")
+```
+
+Now we import the validation data.
+
+```{r}
+n_max <- 150
+# n_files <- length(validation_files)
+# valid_images <- array(dim = c(n_files, n_max, n_max))
+# valid_labels <- rep(NA, n_files) 
+# 
+# 
+# for (i in 1:n_files) {
+#   image_file <- paste0("./data_raw/validation/",
+#                        validation_files[i])  
+#   image_jpg <- jpeg::readJPEG(image_file)
+#   image_i <- resizeImage(image = image_jpg[,,1], n_max, n_max)
+#     valid_images[i,, ] <- array(image_i, dim=c(1,n_max,n_max))
+#     valid_label_temp <- validation_files[i] %>% strsplit("\\/") %>% unlist()
+#     
+#     valid_labels[i] <- valid_label_temp[1]
+#     
+#   print(i)
+# }
+# 
+# save(valid_images, valid_labels, file = "ValidData.RDA")
+# load("./data_processed/ValidData.RDA")
+```
+
+If you don't want to code along the data import, you can start here and directly load the data.
+
+```{r}
+load("./data_processed/TrainData.RDA")
+load("./data_processed/ValidData.RDA")
+train_labels_factors <- train_labels %>%
+  as.factor() %>% 
+  as.numeric()-1
+
+```
+
+# Model Creation
+
+In this chapter we create the model.
+
+## Layer Setup and Model Configuration
+
+```{r}
+create_dense_model <- function() {
+  dnn_dense_model <- 
+    keras_model_sequential() %>% 
+    layer_flatten(input_shape = c(n_max, n_max)) %>% 
+    layer_dense(units = 50, activation = 'relu') %>% 
+    #layer_dropout(rate = 0.4) %>% 
+    layer_dense(units = 50, activation = 'relu') %>% 
+    #layer_dropout(rate = 0.4) %>% 
+    layer_dense(units = 50, activation = 'relu') %>% 
+    layer_dense(units = 10, activation = 'softmax') %>% 
+    keras::compile(optimizer = 'adam',
+                   loss = 'sparse_categorical_crossentropy',
+                   metrics = 'accuracy')
+}
+```
+
+## Model Training
+
+Now we can train our model.
+
+```{r}
+dnn_dense_model <- create_dense_model()
+history <- dnn_dense_model %>% 
+  fit(train_images, train_labels_factors, 
+      validation_split = 0.2,
+      batch_size = 256,
+      epochs = 30)
+plot(history,
+     smooth = F)
+
+```
+
+## Model Saving and Restoring
+
+We save the model, so that we don't have to run it again.
+
+```{r}
+filepath <- "./models/dnn_dense.h5"
+save_model_hdf5(object = dnn_dense_model, filepath = filepath)
+dnn_dense_model %>% summary()
+```
+
+If we want to load it, we just do so.
+
+```{r}
+dnn_dense_model <- load_model_hdf5(filepath = filepath)
+```
+
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Make Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+```{r}
+# prepare resulting dataframe with predicted and actual labels
+valid_check <- tibble(label_pred = NA,
+                      label_act = valid_labels %>% 
+  gsub(pattern = "n", replacement = ""))
+n_valid <- dim(valid_images)[1]
+for (id_curr in 1:n_valid) {
+  valid_image <- array(valid_images[id_curr,, ], dim = c(1, n_max, n_max))
+  # dim(valid_image)  # check dimensions of image
+  predictions <- dnn_dense_model %>% 
+    predict(valid_image)
+  label_pred <-which.max(predictions)-1
+  valid_check$label_pred[id_curr] <- label_pred
+ #print(id_curr)
+}
+```
+
+## Baseline Classifier
+
+```{r}
+tab_act <- table(valid_check$label_act)
+max(tab_act) / sum(tab_act) * 100
+```
+
+If we assign all "predictions" to the most frequent class, we get an accuracy of 11 %. This is what our algorithm should exceed to be useful.
+
+## Confusion Matrix
+
+```{r}
+table(valid_check$label_pred, valid_check$label_act)
+```
+
+We use function **confusionMatrix()** from caret package and pass actual and predicted labels.
+
+```{r}
+caret::confusionMatrix(as.factor(valid_check$label_pred),
+                       as.factor(valid_check$label_act))
+```
+
+Cohen's kappa is close to zero, which indicates that our model is merely better than pure chance (Baseline classifier). Take a look at 95 % confidence interval. This also indicates that our model is not very useful.
+
+You might play with the data and try to improve it. In the chapter on Convolutional Neural Networks you will learn a much more suitable technique for Image Classification and you will get much better predictions.
+
+# Acknowledgement
+
+The dataset is provided via Kaggle and can be found [here](https://www.kaggle.com/slothkong/10-monkey-species/home). Thanks to Romain Renard, Gustavo Montoya, Jacky Zhang and Sofia Loaiciga for providing the dataset.
+

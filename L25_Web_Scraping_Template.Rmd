@@ -1,0 +1,65 @@
+---
+title: 'Web Scraping'
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+suppressPackageStartupMessages(library(knitr))
+```
+
+# Introduction
+
+Web scraping is used to extract data from websites. This is incredible easy with R. In this tutorial you will learn how to extract a table from a complex site. In the Wikipedia article (Wind power by country)[https://en.wikipedia.org/wiki/Wind_power_by_country] you find a table with installed wind power capacity, embedded in a complex site with text, graphs and other tables. How can you extract information of this specific table? 
+
+* Objective: Learn how to extract components of websites
+* Requirements: Google Chrome, R Basics
+
+# Preparation
+
+First, you need to install and load the package _rvest_.
+
+```{r get_package}
+# code here
+```
+
+Now you can define the url.
+```{r url}
+url <- "https://en.wikipedia.org/wiki/Wind_power_by_country"
+```
+
+To get the information of the specific table you need to get _xpath_ information. _xpath_ can be used to navigate in XML documents. We will use it to identify the table of interest. If you have installed Google Chrome it is easy. (If you are using a different browser, there are many addins for this purpose.)
+
+If you in the browser and on the website, just click CTRL + SHIFT + I or right-click and Inspect. On the right side of your screen a new windows appears called DevTools. If you hover over the items the objects on the website are highlighted. Now you browse until you find the table highlighted. 
+
+Now you only have to copy the xpath string by _right-clicking_ --> _Copy_ --> _Copy XPath_. This is used within R for accessing the table. This reference can be used in html_node(). At first the complete
+
+```{r download}
+# code here
+```
+
+In a first step the complete url is downloaded. In a second step only the relevant component, identified by xpath, is filtered. Finally, this needs to be converted from HTML to a dataframe. For this _html_table()_ is applied.
+
+Now, a dataframe _wind_ is available for further processing.
+
+```{r table_prep, echo=FALSE}
+for (i in 2:ncol(wind)) {
+	wind[, i] <- gsub(",", "", wind[, i])
+	wind[, i] <- gsub("-", 0, wind[, i])
+	wind[, i] <- as.numeric(as.character(wind[, i]))
+}
+```
+
+# Result
+
+Finally, let's take a look at the table and compare it to the source. It worked perfectly.
+
+```{r table}
+# code here
+```

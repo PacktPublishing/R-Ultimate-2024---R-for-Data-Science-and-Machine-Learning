@@ -1,0 +1,81 @@
+---
+title: "R6 Classes"
+output: html_document
+date: "2023-12-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Installation
+
+```{r}
+# install.packages("R6")
+library(R6)
+```
+
+```{r}
+# Define the Deck class
+Deck <- R6Class(
+  "Deck",
+  public = list(
+    SUIT = c("♣", "♠", "♦", "♥"),  # "\u2660" --> "♣"
+    RANK = as.character(c(7:10, "J", "Q", "K", "A")),
+    cards = NULL,
+    
+    initialize = function() {
+      self$cards <- character(0)
+      for (suit in self$SUIT) {
+        for (rank in self$RANK) {
+          self$cards <- c(self$cards, paste0(suit, " ", rank))
+        }
+      }
+    },
+    
+    shuffle = function() {
+      self$cards <- sample(self$cards)
+    },
+    
+    draw = function() {
+      card <- tail(self$cards, 1)
+      self$cards <- head(self$cards, -1)
+      return(card)
+    },
+    
+    print = function() {
+      cat(paste("Deck of", length(self$cards), "cards\n"))
+    },
+    
+    length = function() {
+      return(length(self$cards))
+    }
+  )
+)
+```
+
+# Class Instance
+
+```{r}
+# Instantiate an object
+deck <- Deck$new()
+print(deck$cards)
+
+# Print deck
+deck
+
+# Properties
+deck$RANK
+deck$SUIT
+deck$cards
+
+# Methods
+deck$shuffle()
+deck$length()
+deck$draw()
+length(deck$cards)
+
+deck2 = deck$clone()
+
+```
+

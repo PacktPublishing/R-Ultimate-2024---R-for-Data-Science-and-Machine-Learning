@@ -1,0 +1,60 @@
+---
+title: "Joining Datasets"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Data Preparation
+
+```{r}
+library(tidyverse)
+```
+
+
+We create two dataframes that we will join then together to one dataset.
+
+```{r}
+a <- tibble(index = 1:5, 
+            value = rnorm(5))
+
+b <- tibble(index = 3:7, 
+            value = rnorm(5))
+a
+b
+```
+
+# Left Join
+
+Left join takes the LHS dataset (first dataframe) and keeps it unchanged. Based on a common index-column, the values of RHS (second dataframe) are bound at the locations for which index locations are available.
+
+```{r}
+left_joined <- left_join(x = a, y = b, by = "index")
+left_joined
+```
+
+# Right Join
+
+Right join takes the RHS dataset (second dataframe) and keeps it unchanged. Based on a common index-column, the values of LHS (first dataframe) are bound at the locations for which index locations are available.
+
+```{r}
+right_joined <- right_join(x = a, y = b, by = "index")
+right_joined
+```
+
+# Full Join
+
+
+Full join takes the LHS and RHS datasets and keeps them unchanged. Based on a common index-column, the values are added at the locations for which index locations are available. For positions where no information is available NA alues are added.
+
+
+```{r}
+full_joined <- full_join(x = a, y = b, by = "index")
+full_joined
+```

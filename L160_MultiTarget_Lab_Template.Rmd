@@ -1,0 +1,252 @@
+---
+title: "Multi Target Regression - Lab"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Data Understanding
+
+We will work on Energy Efficiency. More information on the data can be found [here](http://archive.ics.uci.edu/ml/datasets/Energy+efficiency).
+
+We perform energy analysis using 12 different building shapes simulated in Ecotect. The buildings differ with respect to the glazing area, the glazing area distribution, and the orientation, amongst other parameters. We simulate various settings as functions of the afore-mentioned characteristics to obtain 768 building shapes. The dataset comprises 768 samples and 8 features, aiming to predict two real valued responses. It can also be used as a multi-class classification problem if the response is rounded to the nearest integer.
+
+We have these attributes:
+
+The dataset contains eight attributes (or features, denoted by X1...X8) and two responses (or outcomes, denoted by y1 and y2). The aim is to use the eight features to predict each of the two responses. 
+
+Specifically: 
+X1	Relative Compactness 
+X2	Surface Area 
+X3	Wall Area 
+X4	Roof Area 
+X5	Overall Height 
+X6	Orientation 
+X7	Glazing Area 
+X8	Glazing Area Distribution 
+y1	Heating Load 
+y2	Cooling Load
+
+# Data Preparation
+
+## Packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(keras)
+library(readxl)
+library(caret)
+
+source("./functions/train_val_test.R")
+```
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/energy.xlsx"
+if (!file.exists(file_path)) { 
+  dir.create("./data")
+  url <- "http://archive.ics.uci.edu/ml/machine-learning-databases/00242/ENB2012_data.xlsx"
+  download.file(url = url, 
+                destfile = file_path, 
+                mode = "wb")
+}
+
+energy_raw <- readxl::read_xlsx(path = file_path)
+```
+
+We now have`r nrow(energy_raw)` observations and `r ncol(energy_raw)` variables.
+
+These column names are detected:
+
+```{r}
+energy_raw %>% colnames
+```
+You can see we have eight independent variables and two dependent (target) variables.
+
+```{r}
+energy_raw %>% summary
+```
+
+All variables are numeric.
+
+## Train / Validation / Test Split
+
+We will use 80 % training data and 20 % testing data.
+
+```{r}
+c(train, val, test) %<-% train_val_test_split(df = energy_raw, 
+                                              train_ratio = 0.8, 
+                                              val_ratio = 0.0, 
+                                              test_ratio = 0.2)
+
+```
+
+# Modeling
+
+The data will be transformed to a matrix.
+
+```{r}
+# code here
+```
+
+## Data Scaling
+
+The data is scaled. This is highly recommended, because features can have very different ranges. This can speed up the training process and avoid convergence problems.
+
+```{r}
+# create scaled X train
+# code here
+
+# apply mean and sd from train dataset to normalize test set
+# code here
+
+# code here
+```
+
+
+## Initialize Model
+
+```{r}
+# code here
+```
+
+## Add Layers
+
+We add two hidden layers and one output layer with two units for prediction.
+
+```{r}
+# code here
+```
+
+Let's take a look at the model details.
+
+```{r}
+dnn_reg_model %>% summary()
+```
+
+It is a very small model with only close to 1000 parameters.
+
+## Loss Function, Optimizer, Metric
+
+```{r}
+# code here
+```
+
+We put all in one function, because we need to run it each time a model should be trained.
+
+```{r}
+create_model <- function() {
+  dnn_reg_model <- 
+      keras_model_sequential() %>% 
+      layer_dense(units = 50, 
+              activation = 'relu', 
+              input_shape = c(ncol(X_train_scale))) %>% 
+      layer_dense(units = 50, activation = 'relu') %>% 
+      layer_dense(units = 2, activation = 'relu') %>% 
+      compile(optimizer = optimizer_rmsprop(),
+              loss = 'mean_absolute_error')
+}
+```
+
+
+## Model Fitting
+
+We fit the model and stop after 80 epochs. A validation ratio of 20 % is used for evaluating the model.
+
+```{r eval=F}
+# code here
+```
+
+There is not much improvement after 40 epochs. We implement an approach, in which training stops if there is no further improvement.
+
+We use a patience parameter for this. It represents the nr of epochs to analyse for possible improvements.
+
+```{r}
+# re-create our model for this new run
+# code here
+
+plot(history,
+     smooth = F)
+```
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+```{r}
+# code here
+
+y_test_pred %>% head
+```
+We can see that we have two output columns, which refer to our two target variables.
+
+## Check Performance
+
+```{r}
+# code here
+```
+
+We create correlation plots for Y1 and Y2.
+
+```{r}
+R2_test <- caret::postResample(pred = test$Y1_pred, obs = test$Y1)
+g <- ggplot(test, aes(Y1, Y1_pred))
+g <- g + geom_point(alpha = .5)
+g <- g + annotate(geom = "text", x = 15, y = 30, label = paste("R**2 = ", round(R2_test[2], 3)))
+g <- g + labs(x = "Actual Y1", y = "Predicted Y1", title = "Y1 Correlation Plot")
+g <- g + geom_smooth(se=F, method = "lm")
+g
+```
+
+```{r}
+R2_test <- caret::postResample(pred = test$Y2_pred, obs = test$Y2)
+g <- ggplot(test, aes(Y2, Y2_pred))
+g <- g + geom_point(alpha = .5)
+g <- g + annotate(geom = "text", x = 15, y = 30, label = paste("R**2 = ", round(R2_test[2], 3)))
+g <- g + labs(x = "Actual Y2", y = "Predicted Y2", title = "Y2 Correlation Plot")
+g <- g + geom_smooth(se=F, method = "lm")
+g
+```
+
+# Hyperparameter Tuning
+
+Now we could move forward and adapt 
+
+- network topology, 
+
+- count of layers, 
+
+- type of layers, 
+
+- count of nodes per layer, 
+
+- loss function, 
+
+- activation function, 
+
+- learning rate, 
+
+- and much more, ...
+
+Play around with the parameters and see how they impact the result.
+
+# Acknowledgement
+
+We thank the authors of the dataset:
+
+The dataset was created by Angeliki Xifara (angxifara '@' gmail.com, Civil/Structural Engineer) and was processed by Athanasios Tsanas (tsanasthanasis '@' gmail.com, Oxford Centre for Industrial and Applied Mathematics, University of Oxford, UK).

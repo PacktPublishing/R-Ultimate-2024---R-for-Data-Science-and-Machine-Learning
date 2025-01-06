@@ -1,0 +1,95 @@
+---
+title: "Factors"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = T, message = T)
+```
+
+# Introduction
+
+A factor is very similar to a vector. The difference is that only a fixed list of values (so called levels) is allowed.
+
+# Creation
+
+Factors store categorical values.
+
+```{r}
+x <- factor(c("a", "b", "c", "b"))
+levels(x)
+```
+
+# Changing Values and Levels
+
+You can reassign values.
+
+```{r}
+x[1] <- "c"
+```
+
+But you cannot use values that are not defined in the levels.
+
+```{r}
+x[1] <- "d"
+x
+```
+
+You can't combine factors
+
+```{r}
+factor1 <- factor("first")
+factor2 <- factor("second")
+c(factor1, factor2)
+```
+
+When should you use it? --> When you know the allowed range of values:
+
+```{r}
+worktype_char <- c("employed", "unemployed", "employed")
+# if you want to keep status "retired" as well, you need to add it as a level, even if your initial data does not have it.
+worktype_factor <- factor(x = worktype_char, 
+                          levels = c("employed", "unemployed", "retired"))
+```
+
+This way you can get information on that level as well:
+
+```{r}
+table(worktype_factor)
+```
+
+# Data Import Problem
+
+When you import data and the column has some non-numeric values, the column type will be set to factor. One reason might be a wrong decimal separator.
+
+```{r}
+txt_data <- read.table("./data/factorImport.txt", 
+                       header = T)
+txt_data
+```
+
+# Casting Factors to Numeric
+
+If you want to cast it to numeric, you need to cast it to character at first!
+
+Otherwise you get the factor levels instead of the values.
+
+```{r}
+# how NOT to do it
+levels(txt_data$value)
+as.numeric(txt_data$value) 
+```
+
+```{r}
+# how to do it
+as.numeric(as.character(txt_data$value))
+```
+
+
+

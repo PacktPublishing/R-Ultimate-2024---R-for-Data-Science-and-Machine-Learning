@@ -1,0 +1,48 @@
+---
+title: "Set Operations"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+We create two ranges that overlap.
+
+```{r}
+a <- 1 : 10
+b <- 5 : 15
+```
+
+# Intersect
+
+*intersect()* calculates the intersection of two vectors.
+
+```{r}
+
+intersect(a, b)
+```
+
+# Setdiff
+
+*setdiff()* calculates the difference of two vectors.
+
+```{r}
+setdiff(a, b)
+```
+
+# Union
+
+*union()* calculates all unique observations from both vectors.
+
+```{r}
+union(a, b)
+```
+

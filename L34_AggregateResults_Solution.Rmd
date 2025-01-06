@@ -1,0 +1,52 @@
+---
+title: "Aggregating Results: Exercise"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+# Data Preparation
+
+# Exercise
+
+- Load the dataset "txhousing", which holds information on Texas housing market.
+
+```{r}
+data("txhousing")
+txhousing %>% head
+```
+
+- Calculate the average sales for each city. During the calculation of mean values the result is coerced to NA, if there is a single NA present. Disable this functionality and change it so that missing values are excluded.
+
+```{r}
+txhousing %>% 
+  group_by(city) %>% 
+  summarise(mean_sales = mean(sales, na.rm = T))
+```
+
+- Calculate the average sales for city and year and save it in object "tx_city_year".
+
+```{r}
+tx_city_year <- txhousing %>% 
+  group_by(city, year) %>% 
+  summarise(mean_sales = mean(sales, na.rm = T))
+```
+
+```{r}
+ggplot(tx_city_year, aes(x = year, y = mean_sales, col = city)) + 
+  geom_line() + 
+  labs(x = "Year", y = "Mean Sales", title = "Average Sales per Year and City")
+```
+

@@ -1,0 +1,118 @@
+---
+title: "List Handling"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This tutorial provides a basic introduction to lists. It is shown how you can create a list and access its elements. The key concept of applying a function to each element of a list is explained based on _purrr_ package with its _map()_ function.
+
+# Packages
+
+```{r}
+library(purrr)
+library(listviewer)
+library(tidyverse)
+```
+
+
+# Introduction
+
+A _list_ is a very flexible data type in R. It can collect elements of different types and lengths. It is a relative of a _dataframe_. 
+
+A _dataframe_ is more restricted. Variables need to have unique names. Each variable is a vector and all variables have the same length.
+
+# Creation and Accessing of Elements
+
+A _list_ is created 
+
+```{r}
+char_vec <- c("a", "first", "test")
+num_vec <- c(1, 2.5, 4, 7)
+bool_vec <- c(TRUE, FALSE)
+first_list <- list(char_vec, num_vec, bool_vec)
+first_list
+```
+
+An element of this list can be accessed with squared brackets. The first item of the list is accessed with:
+```{r}
+first_list[1]
+```
+
+If the third member of this first item should be accessed, double brackets need to be used, follwed by the index in single brackets.
+```{r}
+first_list[[1]][3]
+```
+
+You can create named lists.
+
+```{r}
+first_list <- list(chars = char_vec, 
+                   nums = num_vec, 
+                   bools = bool_vec)
+```
+
+# View a List
+
+Default list view is not very nice looking. For a nicer view package _listviewer_ can be used. Please make sure it is installed before loading it.
+```{r}
+library(listviewer)
+jsonedit(first_list, mode = "view",width = 640, height = 250)
+```
+
+# Applying a Function to each Element 
+
+Most interesting part of this tutorial is how to apply a function to each element of the list. For this package _purrr_ needs to be loaded. Also, package _listviewer_ is used for creating a nice view. Please make sure you have installed it before loading.
+
+## Simple Example
+We will create a list with five highest mountains, their names, and their heights. Here, named lists are used with the names "name" and "height".
+
+```{r}
+Nr1 <- list(name = "Mount Everest",
+	    height = 8848)
+Nr2 <- list(name = "K2",
+	    height = 8611)
+Nr3 <- list(name = "Kangchenjunga",
+	    height = 8586)
+Nr4 <- list(name = "Lhotse",
+	    height = 8516)
+Nr5 <- list(name = "Makalu",
+	    height = 8485)
+
+mountains <- list(Nr1, Nr2, Nr3, Nr4, Nr5)
+jsonedit(mountains, mode = "view", width = 640, height = 250)
+```
+
+It is not easy to extract, e.g. all names of the mountains, from this format. You would need some _for_-loop or _lapply_. Luckily, this task is very easy with _map_. As parameters we pass the list _mountains_. It also may be a column in a dataframe or a vector. Second parameter is a function. In our case the name variable should be shown.
+
+```{r}
+purrr::map(.x = mountains, .f = c("name"))
+```
+
+The output of _map_ is itself a list. In our example it would be more intuitive to return a character. For this there are several map-function that return a specific type (e.g. _map_int_ for integer, _map_df_ for returning a dataframe). We make use of _map_chr_ for returning a character vector.
+
+```{r}
+purrr::map_chr(.x = mountains, .f = c("name"))
+```
+
+## Advanced Example
+
+More complex functions can be used as well. In this example famous _iris_ dataset is used, which contains information on iris flowers like Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, and Species. 
+
+First, we load _iris_ data. Data is piped to the split function. (Piping concept is explained in another lecture). The results are three different dataframes. Now, _map()_ function gets active. 
+
+```{r}
+test <- iris %>% 
+	split(.$Species) %>% 
+	purrr::map(~mean(x = .$Sepal.Length)) 
+test
+```
+
+

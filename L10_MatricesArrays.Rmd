@@ -1,0 +1,53 @@
+---
+title: "Matrices and Arrays"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Matrices
+
+Matrices can be created with matrix(). "nrow" and "ncol" define the shape of the matrix. "byrow" defines how the values are assigned - by row or by column.
+
+```{r}
+vec1 <- 1:24
+mat1 <- matrix(data = vec1, 
+               nrow = 6, 
+               ncol = 4, 
+               byrow = F)
+mat1
+```
+
+# Array
+
+An array is created with array(). The "dim" parameter defines the shape.
+
+```{r}
+arr1 <- array(data = vec1, dim = c(3, 4, 2))
+```
+
+An existing object can be changed with dim().
+
+```{r}
+arr2 <- arr1
+dim(arr2) <- c(2, 2, 6)
+arr2
+```
+
+Also you can use dim() to extract the shape of the object.
+
+```{r}
+dim(arr1)
+dim(arr2)
+```
+
+
+

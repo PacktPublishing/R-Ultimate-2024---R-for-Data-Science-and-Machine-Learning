@@ -1,0 +1,194 @@
+---
+title: "Multivariate Regression"
+author: "Bert Gollnick"
+date: "September 13, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding
+
+Wine variants of Portuguese "Vinho Verde" are analysed with regards to their chemical properties. Finally, we are interested how these chemical properties influence wine quality.
+
+
+These are our independent variables:
+
+1 - fixed acidity 
+2 - volatile acidity 
+3 - citric acid 
+4 - residual sugar 
+5 - chlorides 
+6 - free sulfur dioxide 
+7 - total sulfur dioxide 
+8 - density 
+9 - pH 
+10 - sulphates 
+11 - alcohol 
+
+This is our dependent variable:
+
+12 - quality (score between 0 and 10)
+
+## Packages
+
+We load required packages.
+
+```{r}
+library(dplyr)
+library(tibble)
+library(tidyr)
+library(ggplot2)
+library(corrplot)
+library(car)
+library(caret)
+```
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/winequality-red.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+df <- read.csv(file_path, sep = ";")
+```
+
+## Data Summary
+
+```{r}
+# add code here
+```
+
+## Visualising Correlations
+
+There is a way to plot all multivariate correlations (although visually not so appealing). It also does not work, if there are many dimensions. You need to subset the results.
+
+```{r}
+# add code here
+```
+
+We create our own visualisation, that is much better to read.
+
+```{r}
+df_scaled <- df %>% 
+  scale() %>% 
+  as.tibble()
+
+df_gather <- df_scaled %>% 
+  gather(key = "variable", value = "value", 1:11) %>% 
+  mutate(variable = as.factor(variable))
+
+g <-ggplot(df_gather, aes(x = quality, y = value))
+g <- g + facet_wrap( ~ variable)
+g <- g + geom_point()
+g <- g + geom_smooth(se = F, method = "lm")
+g
+```
+
+## Correlation Matrix
+
+Assuming there is a linear relationship between variables, a correlation matrix is calculated.
+
+```{r}
+cor_vals <- cor(df) %>% 
+  as.data.frame() %>% 
+  dplyr::mutate(Var1 = rownames(.)) %>% 
+  gather(key = "Var2", value = "Corr", 1:12)
+g <- ggplot(cor_vals, aes(x = Var1, y = Var2, fill = Corr))
+g <- g + geom_tile()
+g <- g + scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+   name="Pearson\nCorrelation")
+g <- g + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g
+```
+
+Also here we can make use of a simpler alternative: **corrplot()**.
+
+```{r}
+# add code here
+```
+
+This shows in the upper right triangle correlations as circles. Size corresponds to absolute value of correlation. We are looking for large circles, because they indicate high absolute correlations. The colors correspond to positive or negative correlations. Positive correlation between X and Y means, that an increase of X leads to an increase in Y. A negative correlation between X and Y means, that an increase of X leads to a decrese in Y.
+
+# Modeling
+
+## Model Setup
+
+We create a model with **lm()**.
+
+```{r model_setup}
+# add code here
+```
+
+```{r}
+# add code here
+```
+
+We see which parameters are statistically relevant, and what the parameter values are.
+
+## Predictions
+
+Now, we can create predictions.
+
+```{r}
+# add code here
+```
+
+Predicted values and true values are visualised as correlation plot. A linear regression line is drawed for reference. Also a black line is drawed as reference for a perfect regression, in which predicted values and actual values are identical. 
+
+```{r}
+g <- ggplot(df, aes(y = quality, x = quality_pred))
+g <- g + geom_point(alpha = .1)
+g <- g + geom_smooth(method = "lm", se = F)
+g <- g + geom_abline(slope = 1, intercept = 0)
+g <- g + ylab ("Actual")
+g <- g + xlab ("Prediction")
+g <- g + ggtitle ("Prediction vs. Actual")
+g
+```
+
+Predicted regression line nearly matches vertical line. This means there is hardly any bias. But the variation is quite high.
+
+## Model Performance
+
+We calculate adjusted R-squared to analyse model performance. R-squared is a measure that indicates how much of variability in data is explained by the model.
+
+```{r}
+# add code here
+```
+
+Only 35 % of variability in the data is explained by the model. That is rather poor, so we should think about some more complex model.
+
+You should use adjusted R-squared, because R-squared always increases when more explanatory variables are added to a model. Its value will always be less or equal to R-squared.
+
+Model quality is far from perfect, but reasonably good.
+
+## Error Independence
+
+The residuals of the model should be normally distributed. We can check this based on a QQ-plot. We extract the residuals and visualise it with **qqnorm()**. **qqline()** adds a reference line. We assume linearity if all points are on this line.
+
+```{r}
+# add code here
+```
+
+
+# Acknowledgement
+
+This dataset was provided by:
+
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. 
+Modeling wine preferences by data mining from physicochemical properties. In Decision Support Systems, Elsevier, 47(4):547-553, 2009.

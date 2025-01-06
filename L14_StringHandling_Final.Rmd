@@ -1,0 +1,185 @@
+---
+title: "Strings: Learning String-Handling with Orwell's Masterpiece '1984'"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+We will learn to work with strings. For this we will analyse one of my favorite books: George Orwell's 1984. 
+
+* Objectives: Learn string handling, e.g. functions _grep()_, _gsub()_, _nchar()_, _strsplit()_, and many more
+
+* Requirements: None
+
+# Packages
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+library(stringr)
+suppressPackageStartupMessages(library(wordcloud))
+```
+
+
+# Import
+
+Luckily this book is available for download. The link is stored in variable "url" and the text is downloaded with _readLines()_ and save in "text_1984".
+```{r import, cache=TRUE}
+url <- "http://gutenberg.net.au/ebooks01/0100021.txt"
+text_1984 <- readLines(url)
+```
+
+# Filtering
+
+The book has some overhead: introductory text at the beginning and some appendix at the end. We want to analyse the pure book, so we filter the text to its core.
+
+```{r data_prep}
+text_1984_filt <- text_1984[47: length(text_1984)]
+text_1984_filt <- text_1984_filt[1:9865]
+```
+
+What structure does this object have?
+```{r}
+str(text_1984_filt)
+```
+It is a character vector with 9865 elements. There is just one problem. Some elements contain several words, some don't contain a single word. Our aim is to have a vector with a single word as each element.
+
+# Concatenation with _paste()_
+
+First, we collapse this vector to one single string. This can be done with _paste()_ function. Separators are blank signs between the words. In a second step we modify all letters to lower letters with _str_to_lower()_. 
+
+```{r}
+# collapse to a single string
+text_1984_one_single_string <- paste(text_1984_filt, collapse = " ")
+text_1984_one_single_string <- str_to_lower(text_1984_one_single_string)
+```
+
+If you want to use upper case you can use _str_to_upper()_. If you want to use titles use _str_to_title()_.
+
+# Separate a String with _str_split()_
+
+Now we create the character vector with single words. We can use _str_split()_ and split at each blank sign " ". The result is a list with one element. We access this element with "[[1]]".
+
+```{r}
+# separate each word
+text_1984_separate_words <- str_split(string = text_1984_one_single_string, pattern = " ")[[1]]
+head(text_1984_separate_words, n=10)
+```
+This looks as desired. 
+
+# Finding Patterns with _grep()_
+
+Are there numbers in the text? We will find out with _grep()_ or _str_subset()_. These commands search for matches within the text. 
+
+But how can we define all numbers? The easy way is to run _grep()_ with parameter "0", "1", "2", ... But this takes quite some effort and contradicts DRY (don't repeat yourself principle). 
+
+There is a better way. You can use "[0-9]" for all numbers from 0 to 9. This is a regular expression. Regular expressions are extremely powerful. Some links are shown at the end of this article.
+
+```{r}
+# head(grep("[0-9]", text_1984_separate_words, value = T))
+head(str_subset(string = text_1984_separate_words, pattern = "[0-9]"))
+```
+
+We can use this regular expression to remove numbers and hyphens. We will have a separate lecture on regular expressions.
+
+```{r}
+# delete numbers
+text_1984_separate_words <- str_replace_all(pattern = "[0-9]", 
+                                            replacement = "", 
+                                            string = text_1984_separate_words)
+
+# delete hyphens
+text_1984_separate_words <- str_replace_all(pattern = "-", 
+                                            replacement = " ",
+                                            string = text_1984_separate_words)
+head(text_1984_separate_words)
+```
+
+# Detect Empty Words with _str_length()_
+
+There are still empty elements, which we will delete in the next step. Empty element have zero characters, which we can find out with _str_length()_. so we filter for _str_length()_ > 0.
+
+```{r}
+# delete empty words
+text_1984_separate_words <- text_1984_separate_words[str_length(text_1984_separate_words) > 0]
+```
+
+# Characters Occurances
+
+The main characters are "Winston", "Julia", "O'Brien" and of in a way "big brother". with _table()_ the number of occurances are shown. We concentrate on the main characters and filter for them with"[ ]". 
+
+```{r}
+table(text_1984_separate_words)[c("winston", "julia", "o\'brien", "brother")]
+```
+Not surprisingly "Winston" as the main character has the most appearances.This is not sorted. We can order this table with _sort()_. Default is ascending order, but with parameter "decreasing = T" it is changed to decreasing.
+
+```{r}
+sort(table(text_1984_separate_words)[c("winston", "julia", "o\'brien", "brother")], decreasing = T)
+```
+
+# Findest the shortest Word
+
+I am curious about finding out, what the shortest word is. We already know the length of a word can be found with _str_length()_. Now, we need to find the position of maximum and use _which.max()_.
+
+```{r}
+pos_min <- which.min(str_length(text_1984_separate_words))
+text_1984_separate_words[pos_min]
+```
+
+Surprise, surprise. The shortest word is "a". The opposite is _which.max()_. Find out for yourself what the longest word is.
+
+# Word Lengths 
+
+What are the distribution of word lengths. Let's see with hist()_ and plot a histogram.
+```{r}
+hist(str_length(text_1984_separate_words), breaks = seq(1, 30, 1))
+```
+
+# Letter Frequencies
+
+How often does each letter appear in the text? To find out we split our single text-string at each position with "". With _table() we can calculate occurance of each letter. 
+
+```{r}
+single_chars <- str_to_lower(string = strsplit(text_1984_one_single_string, "")[[1]])
+char_freq <- table(single_chars)[letters]
+```
+
+The relative frequencies are shown in this graph. 
+
+```{r, echo=F}
+char_freq <- as.data.frame(char_freq)
+char_freq$Freq <- char_freq$Freq / sum(char_freq$Freq)
+g <- ggplot(char_freq, aes(single_chars, Freq))
+g <- g + geom_bar(stat = "identity")
+g
+```
+
+What is this good for? Well, each language has its unique distribution of letter. Without being able to speak english at all we can find out that this is an english text - just compare this distribution with Wikipedia article on letter frequencies (link at the end of the article).
+
+If some monoalphabetic encryption is used, this is the key to decrypt it and find the plain text. If you are interested in a simple encryption system read this article.
+
+# Wordclouds
+
+Finally, we will use some nice visualisation technique: wordclouds. Wordclouds take all words and present the most common words. Sizes represent number of occurances.
+
+```{r}
+wordcloud(words = text_1984_separate_words[1:2000])
+```
+
+# More Information
+
+* 1984 Book Text http://gutenberg.net.au/ebooks01/0100021.txt
+
+* Regular expressions http://www.regular-expressions.info/rlanguage.html
+
+* More Regular expression https://stat.ethz.ch/R-manual/R-devel/library/base/html/regex.html
+
+* Letter Frequency https://en.wikipedia.org/wiki/Letter_frequency
+

@@ -1,0 +1,74 @@
+---
+title: "Data Filtering"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Data Preparation
+
+## Load Data
+
+```{r}
+# code here
+```
+
+```{r}
+# code here
+```
+
+## Filtering Rows
+
+You can filter for rows with **filter()**.
+
+You can use all comparison operators, e.g. ==, !=, <=, >=, ...
+
+You also can check for categories with %in%.
+
+```{r}
+# code here
+```
+
+Other row-based filters are **sample_n()**
+
+```{r}
+# code here
+```
+
+or **slice()**.
+
+```{r}
+# code here
+```
+
+or **top_n()**.
+
+## Filtering Columns
+
+You can filter for columns with **select()**.
+
+There are two ways to approach this:
+
+1. White-List: define the columns that you want to keep
+
+2. Black-List: define the columns that you don't want to keep
+
+```{r}
+# code here
+```
+

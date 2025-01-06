@@ -1,0 +1,178 @@
+---
+title: "FA Exercise"
+author: "Bert Gollnick"
+date: "October 2, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(psych))
+```
+
+# Introduction
+
+We will work on state anxiety data.
+
+# Data Understanding
+
+State Anxiety was measured two-three times in 11 studies at the Personality-Motivation-Cognition laboratory. Here are item responses for 11 studies (9 repeated twice, 2 repeated three times). In all studies, the first occasion was before a manipulation. In some studies, caffeine, or movies or incentives were then given to some of the participants before the second and third STAI was given. In addition, Trait measures are available and included in the tai data set (3032 subjects).
+
+# Data Preparation
+
+## Data Import
+
+First we load the data. The data is shipped with **psych** package. Assign the data (stored in "psych::tai") to an object called "tai".
+
+```{r}
+"please put your code here"
+```
+
+
+## Data Manipulation
+
+### Filtering
+
+Filter data, so that 
+
+- only study "XRAY" is included
+
+- variables "study", "time", and "id" are dropped
+
+Store the result in an object called "tai_mod".
+
+```{r}
+"please put your code here"
+```
+
+
+### Missing Data Handling
+
+Find out if there are NA to be handled!
+
+```{r}
+"please put your code here"
+```
+
+Please filter your dataset, so that no NAs are included any more.
+
+
+```{r}
+"please put your code here"
+```
+
+How many data is lost, if you only keep all available data? 
+
+```{r}
+"please put your code/answer here"
+```
+
+# Factor Analysis
+
+## Factor Adequacy
+
+Please check based on Kaiser-Meyer-Olkin criterion if all variables are suitable for factor analysis.
+
+```{r}
+"please put your code/answer here"
+```
+
+How do you read the result? Are there unimportant variables? How suitable are the variables?
+
+```{r}
+"please put your code/answer here"
+```
+
+## No Rotation
+
+Perform a factor analysis and assign its result to an object called "tai_pca". 
+
+```{r}
+"please put your code/answer here"
+```
+
+- Extract the factor loadings, stored in first and second column of FA object, 
+
+- transform it to a dataframe and 
+
+- create an additional column "variable", which holds the rownames
+
+- Finally assign this to an object called "factor_loadings".
+
+```{r}
+"please put your code/answer here"
+```
+
+```{r}
+g <- ggplot(factor_loadings, aes(x = Factor1, 
+                                 y = Factor2, 
+                                 label = variable))
+g <- g + geom_point()
+g <- g + geom_text()
+g <- g + labs(x = "Factor 1", y = "Factor 2", title = "Factor Analysis")
+g
+```
+
+## Varimax Rotation
+
+Now create a new factor analysis, this time including rotation "varimax", extract the factor loadings, and visualise it using the code below.
+
+```{r}
+# FA calculation
+"please put your code/answer here"
+
+# Extraction of Factor Loadings
+"please put your code/answer here"
+```
+
+Use this code to visualise the result.
+
+```{r}
+g <- ggplot(factor_loadings, aes(x = Factor1, 
+                                 y = Factor2, 
+                                 label = variable))
+g <- g + geom_point()
+g <- g + geom_text()
+g <- g + labs(x = "Factor 1", y = "Factor 2", title = "Factor Analysis")
+g
+```
+
+What did change? 
+
+```{r}
+"please put your code/answer here"
+```
+
+## Number of Components
+
+Create the scree-plot. You need to extract the correlation matrix, which is stored in FA object as "correlation", and use it for visualisation with **scree.plot()** from psy package. 
+
+```{r}
+library(psy)
+"please put your code/answer here"
+```
+
+How many components would you select based on the methods you learned?
+
+Is our assumption of two reasonable? Please argue!
+
+```{r}
+"please put your code/answer here"
+```
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Margarida G. M. S. Cardoso, margarida.cardoso '@' iscte.pt, ISCTE-IUL, Lisbon, Portugal

@@ -1,0 +1,146 @@
+---
+title: "Data Im- and Export"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Nearly all common formats are supported. Some examples are given. Some very common formats are described here. If your file format is not shown, search for it in the internet and it is very likely that there is a package dealing with it.
+
+# Import
+
+## CSV
+
+CSV is supported natively - without any extra packages, because it is part of the *base* package.
+
+```{r}
+affairs_csv <- read.csv("./data/Affairs.csv")
+```
+
+## Excel
+
+For Excel you need a separate package. There are many. I usually use *readxl*. It has many parameters for **sheet**, **range**, **skip**ing lines, and many more.
+
+```{r}
+library(readxl)
+affairs_xlsx <- read_xlsx(path = "./data/Affairs.xlsx")
+```
+
+## JSON
+
+Java Script Object Notation (JSON) is a very famous format for unstructured data. Of course it can also store structured data like in our case. For this you need the package *jsonlite*.
+
+```{r}
+library(jsonlite)
+affairs_json <- read_json(path = "./data/Affairs.JSON", 
+                          simplifyVector = T)
+```
+
+## SPSS
+
+SPSS is a statistical program with its own file format. With package *foreign* SPSS data can be im- and exported.
+
+```{r}
+library(foreign)
+affairs_spss <- read.table(file = "./data/Affairs.sps", sep = ",")
+```
+
+## PDF
+
+In case of data analysis we are usually interested in extracting tables for PDF documents. You can use package *tabulizer*.
+
+This package needs to be installed differently, because it is hosted on Github.
+
+```{r}
+# if (!require("ghit")) {
+#     install.packages("ghit")
+# }
+# on 64-bit Windows
+# ghit::install_github(c("ropensci/tabulizerjars", "ropensci/tabulizer"), INSTALL_opts = "--no-multiarch")
+
+#library(tabulizer)
+```
+
+For each of 22 pages a list item is created. These have to be post-processed, but still this is a handy way to scrape data from PDF documents.
+
+Also text can be extracted from PDF documents, but this is not shown here.
+
+```{r}
+# affairs_pdf <- tabulizer::extract_tables(file = "./data/Affairs.pdf")
+```
+
+## RDA
+
+RDA is a native R format, which provides compression. RDA saves the object names and can store more than just one object.
+
+```{r}
+load(file = "./data/Affairs.RDA")
+```
+
+## RDS
+
+RDS is the new native R format. RDS does not store the object name and can only contain one object. It has a slightly better compression rate compared to RDA.
+
+```{r}
+affairs_rds <- readRDS(file = "./data/Affairs.RDS")
+```
+
+
+# Export
+
+In the same way and usually with the same packages used for import, we can export data in manifold formats.
+
+## CSV
+
+For CSV export we don't need any additional packages, but instead can use *base* functionality.
+
+```{r}
+write.csv(x = affairs_csv, file = "./data/Affairs_export.csv", 
+          row.names = F)
+```
+
+## JSON
+
+Same as for import we use *jsonlite* for exporting data in JSON format.
+
+```{r}
+library(jsonlite)
+jsonlite::write_json(x = affairs_csv, path = "./data/Affairs.JSON")
+
+```
+
+## SPSS
+
+Package *foreign* is used to export data to SPSS format.
+
+```{r}
+library(foreign)
+write.foreign(df = affairs_csv, 
+              codefile = "./data/Affairs.code",
+              datafile = "./data/Affairs.sps",
+              package = "SPSS")
+
+```
+
+## RDA and RDS
+
+RDA and RDS are native R data formats, which store data compressed.
+
+RDA saves the object names and can store more than just one object. RDS does not store the object name and can only contain one object. RDS also has a slightly better compression.
+
+```{r}
+save(affairs_csv, 
+     file = "./data/Affairs.RDA")
+
+saveRDS(object = affairs_csv,
+        file = "./data/Affairs.RDS"
+        )
+```
+

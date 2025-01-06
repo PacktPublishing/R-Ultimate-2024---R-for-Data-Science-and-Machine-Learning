@@ -1,0 +1,151 @@
+---
+title: "Polynomial Regression"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data Understanding and -preparation
+
+We create an artificial dataset from scratch to show the principle.
+
+# Packages
+
+We load required packages.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+```
+
+## Data Creation
+
+This time we won't load data, but instead create some data to play with.
+
+For a sequence of **x** we create noisy data with a follow a third order polynomial trend.
+
+```{r}
+sample_data <- tibble(x = seq(-20, 40, 0.5),
+                      y = 50 + 0.25 * (x-5)**3,
+                      y_noise = y + rnorm(n = length(y),
+                                          mean = 100, 
+                                          sd = 500))
+```
+
+## Visualisation
+
+```{r}
+g <- ggplot(sample_data, aes(x = x,
+                             y = y_noise))
+g <- g + geom_point()
+# g <- g + geom_smooth(method = "lm", se = F)
+g <- g + geom_line(aes(y = y), col = "red", size = 1)
+g 
+```
+
+# Model
+
+# Linear Model
+
+A linear trend is clearly a poor choice. We expect that a third order polynomial is a good approximation. 
+
+```{r}
+model_lin <- lm(data = sample_data, 
+                formula = y_noise ~ x)
+```
+
+```{r}
+summary(model_lin)
+```
+
+Adjusted R-squared is 0.76. This is an example of underfitting. Our model is not complex enough to cover the complexity of the data.
+
+# Quadratic Model
+
+```{r}
+model_quad <- lm(data = sample_data, 
+            formula = y_noise ~ x + I(x^2))
+summary(model_quad)
+```
+
+
+# Polynomial (3rd order) Model 
+
+So we create a model that estimates the parameters.
+
+You might do it this way.
+
+```{r}
+model_poly <- lm(data = sample_data, 
+            formula = y_noise ~ x + I(x^2) + I(x^3))
+```
+
+To save some coding, you might use **poly()** function.
+
+```{r}
+model_poly <- lm(data = sample_data, 
+            formula = y_noise ~ poly(x, 25))
+```
+
+We can analyse our parameter estimates and the summary of the model.
+
+```{r}
+summary(model_poly)
+```
+
+R-squared is now 0.977 and much higher compared to a linear model.
+
+We also can check residuals and model fitted values to investigate if there is a pattern in the data. If so, that would mean, our model did not fit well.
+
+```{r}
+model_fit_values <- fitted(model_poly)
+model_residuals <- residuals(model_poly)
+plot(model_fit_values, model_residuals)
+```
+
+Many points fit to 0, which is not surprising (take a look at the plot before). Besides this, there is no clear pattern.
+
+# Predictions
+
+We predict data based on the model. 
+
+Hint: Usually it should be avoided to predict values based on a model, that was trained on the same data. We will introduce resampling techniques very soon.
+
+```{r}
+sample_data$y_pred <- predict(object = model_poly, 
+                          newdata = sample_data)
+```
+
+We check the prediction by comparing it to our actual data.
+
+```{r}
+g <- ggplot(sample_data, aes(x, y_pred))
+g <- g +geom_point(aes(y = y_noise))
+g <- g + geom_line(col = "green", size = 2)
+g <- g + geom_line(data = sample_data, aes(x, y), col = "red")
+g
+```
+
+# Model Performance
+
+```{r}
+model_summary <- summary(model_poly)
+model_summary$adj.r.squared
+```
+
+R squared measures proportion of variation of dependent variable **y**, that is explained by independent variables **x** for a linear model.
+
+Adjusted R squared calculates the metric, if more than one independent variable is used.
+
+If you have more than one independent variable - use adjusted R-squared. For only one independent variable, both are calculating the same and are interchangable.
+
+
+

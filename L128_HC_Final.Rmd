@@ -1,0 +1,211 @@
+---
+title: "Hierarchical Clustering"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+library(factoextra)
+library(dendextend)
+library(stats)
+library(cluster)
+```
+
+# Data Understanding
+
+We will work on a dataset on Zoo animals. We want to cluster the animals by their attributes.
+
+More information on the data can be found [here](https://archive.ics.uci.edu/ml/datasets/zoo)
+
+We work with these attributes:
+
+1. animal name
+2. hair
+3. feathers
+4. eggs
+5. milk
+6. airborne
+7. aquatic
+8. predator
+9. toothed
+10. backbone
+11. breathes
+12. venomous
+13. fins
+14. legs
+15. tail
+16. domestic
+17. catsize
+18. type
+
+Our target variable "type" has 7 classes with integer values of 1 to 7.
+
+These numbers represent these groups:
+
+1 -- (41) aardvark, antelope, bear, boar, buffalo, calf, cavy, cheetah, deer, dolphin, elephant, fruitbat, giraffe, girl, goat, gorilla, hamster, hare, leopard, lion, lynx, mink, mole, mongoose, opossum, oryx, platypus, polecat, pony, porpoise, puma, pussycat, raccoon, reindeer, seal, sealion, squirrel, vampire, vole, wallaby,wolf 
+2 -- (20) chicken, crow, dove, duck, flamingo, gull, hawk, kiwi, lark, ostrich, parakeet, penguin, pheasant, rhea, skimmer, skua, sparrow, swan, vulture, wren 
+3 -- (5) pitviper, seasnake, slowworm, tortoise, tuatara 
+4 -- (13) bass, carp, catfish, chub, dogfish, haddock, herring, pike, piranha, seahorse, sole, stingray, tuna 
+5 -- (4) frog, frog, newt, toad 
+6 -- (8) flea, gnat, honeybee, housefly, ladybird, moth, termite, wasp 
+7 -- (10) clam, crab, crayfish, lobster, octopus, scorpion, seawasp, slug, starfish, worm
+
+# Data Preparation
+
+## Data Download
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/zoo.csv"
+if (!file.exists(file_path)) { 
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+zoo_raw <- read.csv(file = file_path)
+```
+
+## Setting column names
+
+```{r}
+colnames(zoo_raw) <- c("animal_name", "hair", "feathers", "eggs", "milk", "airborne", "aquatic", "predator", "toothed", "backbone", "breathes",    "venomous",  "fins","legs", "tail", "domestic", "catsize", "class_type" )
+```
+
+Now there is no missing data any more.
+
+## Data Manipulation
+
+```{r}
+summary(zoo_raw)
+```
+
+There are no NA's that need to be handled. There are 17 attributes and one class attribute.
+
+There are 101 observations which belong to these classes.
+
+```{r}
+table(zoo_raw$class_type)
+```
+
+
+
+```{r}
+file_class <- "./data/class.csv"
+class_names <- read_csv(file_class) %>% as_tibble()
+class_names %>% 
+  dplyr::select(Class_Number, Class_Type)
+```
+
+## Scaling
+
+We don't know if all variables are comparable in mean and standard deviation. Actually it is rather unlikely. So we scale our data.
+
+```{r}
+zoo_mat_scaled <- zoo_raw %>% 
+  dplyr::filter(animal_name != "frog") 
+rownames(zoo_mat_scaled) <- zoo_mat_scaled$animal_name
+zoo_mat_scaled <- zoo_mat_scaled %>% 
+select (-animal_name, -class_type) %>% 
+  scale
+```
+
+
+# Model
+
+Now we can work on hierarchical clustering.
+
+## Distance Matrix
+
+We need to calculate a distance matrix, which hold distances from all points to all other points.
+
+```{r}
+distance_mat <- dist(zoo_mat_scaled, 
+                     method = "euclidean")
+```
+
+## Model Creation
+
+We perform hierarchical clustering based on our distance matrix and complete linkage. We plot the result and 
+
+```{r}
+hc <- hclust(d = distance_mat, method = "complete")
+```
+
+## Cluster Number
+
+### Dendrogram
+
+Based on dendrogram we can make a decision on number of clusters.
+
+```{r}
+plot(hc)
+rect.hclust(tree = hc, k = 7, border = 1:2)
+```
+
+### Elbow Method
+
+We can also use elbow method, that we used for kmeans before.
+
+```{r}
+fviz_nbclust(zoo_mat_scaled, FUN = hcut, method = "wss")
+```
+
+Based on elbow method four cluster should be chosen.
+
+## Dendrogram Comparison
+
+```{r}
+hc_complete <- hclust(d = distance_mat, method = "complete") %>% as.dendrogram
+hc_single <- hclust(d = distance_mat, method = "single") %>% as.dendrogram
+tanglegram(hc_complete, hc_single, 
+           highlight_distinct_edges = FALSE, # Turn-off dashed lines
+  common_subtrees_color_lines = FALSE, # Turn-off line colors
+  common_subtrees_color_branches = TRUE # Color common branches 
+)
+
+```
+
+Two dendrograms can be plotted and their labels are connected. This directly shows similarities and differences between models.
+
+```{r}
+Rowv <- rowMeans(zoo_mat_scaled, na.rm=T)
+hc_reordered <- reorder(as.dendrogram(hc), Rowv)
+heatmap(x = zoo_mat_scaled, Rowv = hc_reordered, )
+```
+
+## Visualisation
+
+```{r}
+hc_cut <- cutree(tree = hc, k = 7)
+fviz_cluster(list(data = zoo_mat_scaled, 
+                  cluster =hc_cut))
+```
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Creator: 
+
+Richard Forsyth 
+
+Donor: 
+
+Richard S. Forsyth 
+8 Grosvenor Avenue 
+Mapperley Park 
+Nottingham NG3 5DX 
+0602-621676

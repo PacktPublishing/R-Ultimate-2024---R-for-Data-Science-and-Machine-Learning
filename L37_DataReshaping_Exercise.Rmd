@@ -1,0 +1,45 @@
+---
+title: "Data Resphaping: Exercise"
+author: "Bert"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Data Preparation
+
+- Load the package "tidyverse".
+
+```{r}
+# code here
+```
+
+- Load the data "population".
+
+- Inspect it by loading the first observations of this data.
+
+```{r}
+# code here
+```
+
+# Data Reshaping
+
+- The data is shaped in a tidy format. Please change it to a wide format (rows represent countries, columns represent years, values represent population).
+
+```{r}
+# code here
+```
+
+- Now take the wide data and reshape it back to a tidy format. 
+
+```{r}
+# code here
+```
+
+

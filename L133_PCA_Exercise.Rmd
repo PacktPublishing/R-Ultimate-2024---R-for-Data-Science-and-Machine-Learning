@@ -1,0 +1,143 @@
+---
+title: "PCA: Exercise"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggbiplot))
+suppressPackageStartupMessages(library(stats))
+```
+
+# Introduction
+
+We will work on wholesale data. The data set refers to clients of a wholesale distributor. It includes the annual spending in monetary units (m.u.) on diverse product categories.
+
+# Data Understanding
+
+Data and description of data is found [here](https://archive.ics.uci.edu/ml/datasets/Wholesale+customers).
+
+The data has these attributes:
+
+1)	FRESH: annual spending (m.u.) on fresh products (Continuous); 
+2)	MILK: annual spending (m.u.) on milk products (Continuous); 
+3)	GROCERY: annual spending (m.u.)on grocery products (Continuous); 
+4)	FROZEN: annual spending (m.u.)on frozen products (Continuous) 
+5)	DETERGENTS_PAPER: annual spending (m.u.) on detergents and paper products (Continuous) 
+6)	DELICATESSEN: annual spending (m.u.)on and delicatessen products (Continuous); 
+7)	CHANNEL: customersâ€™ Channel - Horeca (Hotel/Restaurant/CafÃ©) or Retail channel (Nominal) 
+8)	REGION: customersâ€™ Region â€“ Lisnon, Oporto or Other (Nominal) 
+
+# Data Preparation
+
+## Data Download
+
+First we download the data.
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/wholesale.csv"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00292/Wholesale%20customers%20data.csv"
+  download.file(url = url, 
+                destfile = file_path)
+}
+```
+
+## Data Import
+
+Import the data and assign it to a dataframe, called "sale_raw".
+
+```{r}
+# place your code here
+```
+
+## Data Understanding
+
+Find out if there are NA to be handled!
+
+```{r}
+# place your code here
+```
+
+
+
+## Data Manipulation
+
+But certain variables are defined as numeric, like channel or region. In fact they would be rather factors. PCA works based on distances. So these variables are not appropriate and you should drop them.
+
+```{r}
+# place your code here
+```
+
+# Principal Component Analysis
+
+Perform a principal component analysis and assign its result to an object called "sale_pca". PCA is very sensitive to scaling, so you need to scale the data. 
+
+```{r}
+# place your code here
+```
+
+## Scree-Plot and Number of Components
+
+Create the scree-plot.
+
+```{r}
+# place your code here
+```
+
+How many components would you select based on the methods you learned?
+
+```{r}
+# place your code here
+```
+
+## Explained Variance
+
+How much of overall variance is explained by the first two components?
+
+```{r}
+# place your code here
+```
+
+## Visualisation
+
+Create with **ggbiplot()** a visualisation that shows the first two principal components.
+
+```{r}
+# place your code here
+```
+
+Which variables have similar loadings?
+
+```{r}
+# place your answer here
+```
+
+## Business Impact
+
+Think about what impact these results could have on the store layout?
+
+```{r}
+# place your answer here
+```
+
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Margarida G. M. S. Cardoso, margarida.cardoso '@' iscte.pt, ISCTE-IUL, Lisbon, Portugal

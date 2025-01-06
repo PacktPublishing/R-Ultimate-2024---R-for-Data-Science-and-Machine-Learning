@@ -1,0 +1,159 @@
+---
+title: "Decision Tree"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(rpart))
+suppressPackageStartupMessages(library(rpart.plot))
+library(keras)
+library(rattle)
+
+source("./functions/train_val_test.R")
+```
+
+
+# Business Understanding
+
+We will create a Credit Approval model. More information can be found at this [link](http://archive.ics.uci.edu/ml/datasets/credit+approval).
+
+We will predict whether an applicant received a credit card.
+
+# Data Understanding
+
+```{r}
+credit_approval <- readRDS("./data/CreditApproval_mod.RDS")
+credit_approval$Approved <- as.factor(credit_approval$Approved)
+```
+
+The dataset has `r nrow(df)` observations and `r ncol(df)-1` attributes, plus one class attribute. The class attribute   
+
+# Data Preparation
+
+In tutorial on missing data handling, this dataset was prepared and missing data was taken care of.
+
+```{r}
+# credit_approval %>% summary()
+```
+
+```{r}
+credit_approval$Approved %>% table()
+```
+
+# Train / Validation / Holdout Split
+
+A ratio of 60 % is used for training, 20 % for validation, and 20 % for holdout.
+
+```{r}
+# code comes here
+```
+
+# Modeling
+
+## Create Classifier
+
+We create the classifier.
+
+```{r}
+# code comes here
+```
+
+
+The decision tree can be viewed.
+
+```{r}
+# code comes here
+```
+
+Individual rules can be shown.
+
+```{r}
+# code comes here
+```
+
+Each rule is easy to understand.
+
+## Visualisation
+
+The decision tree can be visualised.
+
+```{r}
+# code comes here
+```
+
+
+
+
+A nicer visualisation with *fancyRpartplot()*:
+
+```{r}
+# code comes here
+```
+
+
+## Prediction
+
+```{r}
+# code comes here
+```
+
+# Model Evaluation
+
+```{r}
+df_grid <- expand.grid(Income = seq(0, 10, 1),
+                       CreditScore = seq(0,10, 1))
+df_grid <- df_grid %>% 
+  as.tibble() %>% 
+  dplyr::mutate(y_pred_prob = predict(object = tree_fit, newdata = .)[, 2]) %>% 
+  dplyr::mutate(y_pred_class = ifelse(y_pred_prob > 0.5, 1, 0)) %>% 
+  dplyr::mutate(y_pred_class = as.factor(y_pred_class))
+
+g <- ggplot(df_grid, aes(x = Income,
+                         y = CreditScore,
+                         col = as.factor(y_pred_class)))
+g <- g + geom_raster(aes(fill = y_pred_class))
+g <- g + scale_fill_brewer(name = "Approved", palette = "RdYlGn")
+g <- g + geom_point(data = val, aes(x = Income,
+                                         y = CreditScore,
+                                         col = Approved
+                                         ))
+g <- g + coord_cartesian(xlim = c(0, 10),
+                         ylim = c(0, 10))
+g <- g + scale_color_brewer(name = "Acceptance\nProbability", palette = "RdYlGn")
+g <- g + theme_bw()
+g
+```
+
+Check the baseline (null) classifier:
+
+```{r}
+# code comes here
+```
+
+Our classifier:
+
+```{r}
+# code comes here
+```
+
+
+# Acknowledgement
+
+We thank the author for this dataset.
+
+Author: J. Ross Quinlan
+Title: Simplifying Decision Trees
+Journal: Int. J. Hum.-Comput. Stud
+Year: 1987
+

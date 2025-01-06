@@ -1,0 +1,84 @@
+---
+title: "Introduction to Plotly"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+```{r}
+library(tidyverse)
+library(plotly)
+```
+
+# Introduction
+
+We will use data from World Happiness Report. The World Happiness Report is a landmark survey of the state of global happiness.
+
+# Data Preparation
+
+The data can be downloaded from [here](https://www.kaggle.com/unsdsn/world-happiness/).
+
+```{r}
+happiness_2015 <- read_csv("./data/2015.csv") %>% 
+  mutate(year = 2015)
+happiness_2016 <- read_csv("./data/2016.csv") %>% 
+  mutate(year = 2016)
+happiness_2017 <- read_csv("./data/2017.csv") %>% 
+  mutate(year = 2017)
+
+happiness <- happiness_2015 %>% 
+  bind_rows(happiness_2016) %>% 
+  bind_rows(happiness_2017) %>% 
+  select(Country, `Happiness Score`, `Economy (GDP per Capita)`, `Health (Life Expectancy)`, Freedom, year)
+happiness %>% glimpse()
+```
+
+```{r}
+happiness_mod <- happiness %>% 
+  rename(happiness_score = `Happiness Score`) %>% 
+  rename(economy_gdp = `Economy (GDP per Capita)`) %>% 
+  rename(health_life_exp = `Health (Life Expectancy)`)
+```
+
+
+
+# Visualisation
+
+## Complex Plot
+
+We create a complex visualisation (5 dimensional), which has these properties:
+
+- x axis refers to GDP (an economical value)
+
+- y axis refers to life expectancy (a health value)
+
+- size refers to freedom
+
+- color refers to happiness score
+
+- text refers to country
+
+- slider refers to the year
+
+```{r}
+# code here
+```
+
+
+## Using Subplots
+
+```{r}
+# code here
+```
+
+# More Information
+
+More information on plotly can be found on the [R Plotly Homepage](https://plotly-r.com).

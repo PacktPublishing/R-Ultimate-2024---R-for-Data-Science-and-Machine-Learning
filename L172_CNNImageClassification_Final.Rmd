@@ -1,0 +1,198 @@
+---
+title: "Deep Learning: Multi-Label Classification with CNNs"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Business Understanding
+
+You will create an image classifier for monkey species. You find more information [here](https://www.kaggle.com/slothkong/10-monkey-species).
+
+# Data Understanding
+
+The dataset consists of two files, training and validation. Each folder contains 10 subforders labeled as n0~n9, each corresponding a species form Wikipedia's monkey cladogram. Images are 400x300 px or larger and JPEG format (almost 1400 images). Images were downloaded with help of the googliser open source code.
+
+The data has these attributes:
+
+- n0, alouatta_palliata
+
+- n1, erythrocebus_patas
+
+- n2, cacajao_calvus 
+
+- n3, macaca_fuscata   
+
+- n4, cebuella_pygmea
+
+- n5, cebus_capucinus
+
+- n6, mico_argentatus
+
+- n7, saimiri_sciureus 
+
+- n8, aotus_nigriceps
+
+- n9, trachypithecus_johnii
+
+
+# Data Preparation
+
+## Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(keras)
+```
+
+## Load Data
+
+Data was prepared in section on multi-label classification. If you want to know more about which steps were taken, go to this section.
+
+```{r}
+n_max <- 150
+load("./data_processed/TrainData.RDA")
+load("./data_processed/ValidData.RDA")
+train_labels_factors <- train_labels %>%
+  as.factor() %>% 
+  as.numeric()-1
+```
+
+We need to rearrange our training and validation data to make it work with CNN.
+
+```{r}
+dim_train_images <- dim(train_images)
+
+train_images_4D <- array(NA, dim = c(dim_train_images, 1))
+train_images_4D[,,,1] <- train_images
+train_images_4D %>% dim()
+
+dim_valid_images <- dim(valid_images)
+
+valid_images_4D <- array(NA, dim = c(dim_valid_images, 1))
+valid_images_4D[,,,1] <- valid_images
+
+```
+
+
+# Model
+
+## Layer Setup and Model Configuration
+
+```{r}
+create_cnn_model <- function() {
+  dnn_cnn_model <- 
+    keras_model_sequential() %>% 
+    layer_conv_2d(filters = 32, 
+                  kernel_size = c(3, 3), 
+                  input_shape = c(150, 150, 1),
+                  activation = 'relu') %>% 
+    layer_max_pooling_2d(pool_size = c(2,2)) %>%
+    layer_conv_2d(filters = 32, 
+                  kernel_size = c(3, 3), 
+                  activation = 'relu') %>% 
+    layer_max_pooling_2d(pool_size = c(2,2)) %>%
+    layer_conv_2d(filters = 64,
+                  kernel_size = c(3, 3),
+                  activation = 'relu') %>%
+    layer_conv_2d(filters = 64,
+                  kernel_size = c(3, 3),
+                  activation = 'relu') %>%
+    layer_max_pooling_2d(pool_size = c(2,2)) %>%
+    layer_dropout(rate = 0.25) %>% 
+    layer_flatten() %>% 
+    layer_dense(units = 512, activation = 'relu') %>% 
+    layer_dropout(rate = 0.5) %>% 
+    layer_dense(units = 10, activation = 'softmax') %>% 
+    keras::compile(optimizer = 'adam',
+                   loss = 'sparse_categorical_crossentropy',
+                   metrics = 'accuracy')
+}
+```
+
+## Model Training
+
+```{r}
+# dnn_cnn_model <- create_cnn_model()
+# history <- dnn_cnn_model %>% 
+#   fit(train_images_4D, train_labels_factors, 
+#       validation_split = 0.2,
+#       batch_size = 256,
+#       epochs = 10)
+# plot(history,
+#      smooth = F)
+
+```
+
+We save the model, so that we don't have to run it again.
+
+```{r}
+filepath <- "./models/dnn_cnn.h5"
+# save_model_hdf5(object = dnn_cnn_model, filepath = filepath)
+# dnn_cnn_model %>% summary()
+dnn_cnn_model <- load_model_hdf5(filepath = filepath)
+```
+
+# Model Evaluation
+
+We will create predictions and create plots to show correlation of prediction and actual values.
+
+## Make Predictions
+
+First, we create predictions, that we then can compare to actual values.
+
+```{r}
+# prepare resulting dataframe with predicted and actual labels
+valid_check <- tibble(label_pred = NA,
+                      label_act = valid_labels %>% 
+  gsub(pattern = "n", replacement = ""))
+n_valid <- dim(valid_images_4D)[1]
+for (id_curr in 1:n_valid) {
+  valid_image <- array(valid_images_4D[id_curr,,, ], dim = c(1, n_max, n_max, 1))
+  # dim(valid_image)  # check dimensions of image
+  predictions <- dnn_cnn_model %>% 
+    predict(valid_image)
+  label_pred <-which.max(predictions)-1
+  valid_check$label_pred[id_curr] <- label_pred
+ # print(id_curr)
+}
+```
+
+## Baseline Classifier
+
+```{r}
+tab_act <- table(valid_check$label_act)
+max(tab_act) / sum(tab_act) * 100
+```
+
+If we assign all "predictions" to the most frequent class, we get an accuracy of 11 %. This is what our algorithm should exceed to be useful.
+
+## Confusion Matrix
+
+```{r}
+table(valid_check$label_pred, valid_check$label_act)
+```
+
+We use function **confusionMatrix()** from caret package and pass actual and predicted labels.
+
+```{r}
+caret::confusionMatrix(as.factor(valid_check$label_pred),
+                       as.factor(valid_check$label_act))
+```
+
+Cohen's kappa is reasonable, which indicates that our model provides better results than pure chance (Baseline classifier). 
+
+Our accuracy is 0.33, which means our model accuracy is three-times the accuracy of pure chance.
+
+To improve model performance you could basically run it longer (increase epochs to e.g. 100 or 200).
+
+

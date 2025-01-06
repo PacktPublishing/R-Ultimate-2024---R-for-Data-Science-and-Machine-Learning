@@ -1,0 +1,156 @@
+---
+title: "PCA: Lab"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages
+
+First, we load the packages we need.
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggbiplot))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(plot3D))
+suppressPackageStartupMessages(library(psych))
+```
+
+# Business Objective
+
+We want to reduce a 3D representation of an object (a volcano) into 2D. We do this because the idea is easy to understand. This is what we are doing every time looking at a TV screen. 
+
+# Data Understanding
+
+We will work on topographic information on Auckland's Maunga Whau volcano. The dataset is shipped with R and you can load it with **data()**.
+
+```{r}
+data("volcano")
+volcano
+write.csv(x = volcano, file = "Volcano.CSV", row.names = F, col.names = F)
+```
+
+Let's take a look at the volcano in 3D.
+
+```{r}
+plot_ly(z=volcano, type="surface")
+```
+
+```{r}
+# Reduce the resolution
+Volcano <- volcano[seq(1, nrow(volcano), by = 3),
+                   seq(1, ncol(volcano), by = 3)]
+persp3D(z = Volcano, 
+      clab = "m",
+      theta = 120, 
+      phi = 40, 
+      border = NA, 
+      shade = 0.5)
+```
+
+
+# Data Preparation
+
+We have the data in wide-format, but for further processing we need to convert it to tidy-format. Furthermore, it is a matrix format and we want data transform it to a dataframe.
+
+```{r}
+volcano_df <- volcano %>% 
+  as.data.frame() %>%  # transform to dataframe
+  mutate(y = 1:dim(volcano)[1]) %>%  # create new colum y from count of rows
+  gather(key = "x", value = "z", 1:61) %>%  # reshape data from wide to tidy
+  mutate (x = gsub(pattern = "V", replacement = "", x = x)) %>%  # column X is currently character and includes V1, V2, ... we need to remove "V"...
+  mutate(x = as.numeric(x))  # ... and cast it to numeric
+```
+
+# Modeling
+
+Now we can perform principal component analysis. We use function **prcomp()** and pass the dataframe. Also, data needs to be centered and scaled. We save the result in object "volcano_pca".
+
+```{r}
+volcano_pca <- prcomp(x = volcano_df, 
+                      center = T, 
+                      scale. = T)
+```
+
+We extract cumulated importance of principal components.
+
+```{r}
+summary_pca <- summary(volcano_pca)
+cum_importance <- summary_pca$importance[2, ] %>% 
+  as.data.frame() %>% 
+  dplyr::rename(importance = ".") %>% 
+  dplyr::mutate(PC = rownames(.)) %>% 
+  dplyr::mutate(dummy_x = "")
+```
+
+```{r}
+g <- ggplot(cum_importance, aes(x = dummy_x, y = importance*100, fill = PC))
+g <- g + geom_col(position = "stack")
+g <- g + scale_y_continuous(breaks = seq(0, 100, 20))
+g <- g + labs(x = "PC", y = "Cumulated Importance [%]", title = "Cumulated Importance Volcano")
+g <- g + theme_bw()
+g
+```
+
+We can also plot the scree plot.
+
+```{r}
+plot(volcano_pca, type = "l")
+```
+
+Typically, you see some "elbow", which you choose for selecting the number of prinicpal components. Another rule says to choose all components which have a variance > 1. We choose this rule here and select two components.
+
+## Visualisation
+
+```{r}
+volcano_principal_components <- data.frame(PC1 = volcano_pca$x[, 1],
+                         PC2 = volcano_pca$x[, 2],
+                         PC3 = volcano_pca$x[, 3])
+```
+
+Now we can visualise the result.
+
+```{r}
+g <- ggplot(volcano_principal_components, aes(x = PC1, 
+                                              y = PC2))
+                                             # col = PC3))
+#g <- g + scale_color_gradientn(colours = rainbow(5))
+g <- g + geom_point(size = .8)
+g <- g + theme_bw()
+g
+```
+
+We can also use a special package (ggbiplot) for this.
+
+```{r}
+ggbiplot::ggbiplot(volcano_pca, alpha = .1, choices = 1:2)
+```
+
+It adds the explained variance per principal component and shows their axes.
+
+## Explained Variance
+
+The standard deviations of components are stored in PCA object as the first list object. We can calculate the variance by squaring the standard deviations.
+
+We want to calculate the sum of variance of first two components divided by the sum of all variance.
+
+```{r}
+volcano_variance <- volcano_pca$sdev**2
+sum(volcano_variance[1:2]) / sum(volcano_variance) *100
+```
+
+
+
+# Conclusion
+
+We can understand 3D objects easily, so there is not much point in reduction from 3D to 2D, but imagine you have 10 variables (equals 10 dimensions) or more in a dataset, and you want to see if there are patterns, similarities between the observations. Then it is extremely helpful if you can reduce the dimensions to an order that can be visualised.

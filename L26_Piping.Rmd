@@ -1,0 +1,53 @@
+---
+title: "Piping"
+author: "Bert"
+date: "15 März 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+# Introduction
+
+Modern filtering is done with **dplyr** package. It has a consistent and clean way of defining filters.
+
+It makes use of piping, which is why this technique is shown here.
+
+To understand why it is useful, you need to understand what the drawbacks without piping are.
+
+# Nested Functions
+
+Assume you have a vector of numbers. Can you understand what the second line of this expression does?
+
+```{r}
+x <- c(0.109, 0.359, 0.63, 0.996, 0.515, 0.142, 0.017, 0.829, 0.907)
+round(exp(diff(log(x))), 1)
+```
+
+It calculates the log of each of these elements, then calculates the difference between elements, calculates the exponent, and finally rounds the results. Each function is nested within another function. It is hard to read and understand. 
+
+# Piping
+
+This is the piped version. It takes the variable on the left side of the piping operator as first parameter of the function. There is no nesting of functions any more.
+
+```{r}
+x %>% 
+  log() %>% 
+  diff() %>% 
+  exp() %>% 
+  round(1)
+```
+
+
+Piping helps to make the code clearer and more readible. Especially for filtering of datasets it is helpful.

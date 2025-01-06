@@ -1,0 +1,303 @@
+---
+title: "Association Rules"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=F, warning = F)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(arules))
+suppressPackageStartupMessages(library(arulesViz))
+```
+
+# Data Understanding
+
+We work with a dataset on Online Retail. If you want to know more about the dataset, you can check it out [here](https://archive.ics.uci.edu/ml/datasets/online+retail).
+
+Here is the description of the provider of the dataset:
+
+"This is a transnational data set which contains all the transactions occurring between 01/12/2010 and 09/12/2011 for a UK-based and registered non-store online retail.The company mainly sells unique all-occasion gifts. Many customers of the company are wholesalers."
+
+It has the following attributes:
+
+- InvoiceNo: Invoice number. Nominal, a 6-digit integral number uniquely assigned to each transaction. If this code starts with letter 'c', it indicates a cancellation. 
+- StockCode: Product (item) code. Nominal, a 5-digit integral number uniquely assigned to each distinct product. 
+- Description: Product (item) name. Nominal. 
+
+- Quantity: The quantities of each product (item) per transaction. Numeric.	
+
+- InvoiceDate: Invice Date and time. Numeric, the day and time when each transaction was generated. 
+
+- UnitPrice: Unit price. Numeric, Product price per unit in sterling. 
+- CustomerID: Customer number. Nominal, a 5-digit integral number uniquely assigned to each customer. 
+
+- Country: Country name. Nominal, the name of the country where each customer resides.
+
+# Data Preparation
+
+## Raw Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/OnlineRetail.xlsx"
+if (!file.exists(file_path)) { 
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx"
+  download.file(url = url, 
+                destfile = file_path, 
+                method = "curl")
+}
+
+retail <- read_xlsx(path = file_path)
+retail %>% head
+```
+
+## Filter for missing data
+
+We filter for missing data.
+
+```{r}
+retail_mod <- retail %>% 
+  na.omit
+```
+
+## Data Types
+
+Description is stored as characters
+
+```{r}
+retail_mod <- retail_mod %>% 
+  mutate(Description = as.factor(Description)) %>% 
+  mutate(Hour = unclass(as.POSIXlt(InvoiceDate)$hour))
+```
+
+## Exploratory Data Analysis
+
+We check the number of unique products.
+
+```{r}
+retail_mod$Description %>% 
+  table %>% 
+  length
+```
+
+The dataset covers a period from `r first(retail_mod$InvoiceDate)` to 
+`r last(retail_mod$InvoiceDate)`.
+
+### Count of Items per Purchase
+
+Now we check how many items were purchased.
+```{r}
+nr_items_per_buy <- retail_mod %>% 
+  group_by(InvoiceNo) %>% 
+  summarise (items = length(InvoiceNo)) %>%  
+  ungroup() %>% 
+  group_by(items) %>% 
+  summarise(count = length(items))
+
+n_items_max <- 15
+g <- nr_items_per_buy %>% 
+  dplyr::filter(items <= n_items_max) %>% 
+  ggplot(., aes(x = items, y = count))
+g <- g + geom_col()
+g <- g + scale_x_continuous(breaks = 1:n_items_max)
+g <- g + labs (title = "Count and Items", 
+               xlab = "Items bought", 
+               ylab = "Nr. of Buys")
+g <- g + theme_bw()
+g
+```
+
+The distribution is reasonable and should follow [Benfords law](https://en.wikipedia.org/wiki/Benford%27s_law).
+
+### Time of Purchase
+
+When are items usually bought?
+
+```{r}
+time_of_buy <- retail_mod %>% 
+  group_by(Hour) %>% 
+  summarise(count = length(Hour))
+
+g <- ggplot(time_of_buy, aes(Hour, count))
+g <- g + geom_col()
+g <- g + scale_x_continuous(breaks = 6:20)
+g <- g + labs (title = "Time of Purchase", 
+               xlab = "Hour", 
+               ylab = "Nr. of Items sold")
+g <- g + theme_bw()
+g
+```
+
+We see the store is not 24/7. It opens at 6AM and closes at 9PM.
+
+Most sells are done at lunch time.
+
+### Best-selling Products
+
+```{r}
+bestsellers <- retail_mod %>% 
+  group_by(Description) %>% 
+  summarise(count = length(Description)) %>% 
+  ungroup() %>% 
+  arrange(desc(count)) %>% 
+  top_n(10)
+
+g <- bestsellers %>% 
+  ggplot(., aes(x = reorder(Description, count),
+                y = count))
+g <- g + geom_col()
+#g <- g + scale_x_continuous(breaks = 6:20)
+g <- g + labs (title = "Time of Purchase", 
+               xlab = "Hour", 
+               ylab = "Nr. of Items sold")
+g <- g + theme_bw()
+g <- g + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g
+```
+
+## Data Reshaping
+
+We need to prepare the data and bring it into a form that transactions can be handled by the algorithm.
+
+```{r}
+item_sets <- retail_mod %>% 
+  mutate(Description = as.character(Description)) %>% 
+  group_by(InvoiceNo) %>% 
+  select(Description) %>% 
+  summarise_all(funs(paste(Description, collapse = ",")))
+```
+
+```{r}
+write.csv(x = item_sets$Description, 
+          file = "./data/apriori_list.csv", 
+          quote = F, 
+          row.names = F, 
+          col.names = F)
+```
+
+
+## Transformation to Transactions
+
+Now we create a transactions-object based on this dataframe.
+
+```{r}
+# m <- as.matrix(item_sets$Description)
+# l <- lapply(1:nrow(m), FUN = function(i) (m[i, ]))
+# transactions <- as(l, "transactions")
+# transactions
+
+transactions <- read.transactions(file = "./data/apriori_list.csv", 
+                                  format = "basket", 
+                                  sep = ",")
+```
+
+
+# Model 
+
+## Item Frequency
+
+```{r}
+transactions %>% 
+  head() %>% 
+  inspect()
+```
+
+```{r}
+summary(transactions)
+```
+
+
+The graph shows top 10 purchased items.
+
+```{r}
+par(mar=c(1,1,1,1))
+itemFrequencyPlot(x = transactions, 
+                  topN = 10, 
+                  type = "absolute")
+```
+
+## Cross Table
+
+The cross table shows joint occurences of items.
+
+```{r}
+table = crossTable(transactions)
+# colnames(table)
+selection <- which(colnames(table) %in% c("PARTY BUNTING", "REGENCY CAKESTAND 3 TIER", "WHITE HANGING HEART T-LIGHT HOLDER"))
+table[selection, selection] %>% as.data.frame()
+```
+
+
+## Generate Rules
+
+Calculate all rules 
+
+```{r}
+transactions_rules <- apriori(transactions, 
+                              parameter = list(support = 0.001, confidence = 0.9))
+```
+
+Get the top rules, sorted by confidence.
+
+```{r}
+transactions_rules %>% 
+  sort(by = "confidence") %>% 
+  head(5) %>% 
+  inspect()
+```
+
+Get the top rules, sorted by lift.
+
+```{r}
+transactions_rules %>% 
+  sort(by = "lift") %>% 
+  head(5) %>% 
+  inspect()
+```
+
+## Visualise Best Rules
+
+```{r}
+plot(transactions_rules[1:200])
+```
+
+
+## Specific Rules for an Item
+
+```{r}
+tlightholder_rules <- apriori(transactions, 
+                      parameter = list(support = 0.01, confidence = 0.01),
+                      appearance = list(rhs = "WHITE HANGING HEART T-LIGHT HOLDER"))
+
+tlightholder_rules %>% 
+  sort(by = "lift") %>% 
+  head(10) %>% 
+  inspect()
+```
+
+```{r}
+plot(tlightholder_rules,
+     method="graph", 
+     measure="lift", 
+     shading="confidence")
+```
+
+# Acknowledgement
+
+We thank the author of this dataset:
+
+Dr Daqing Chen, Director: Public Analytics group. chend '@' lsbu.ac.uk, School of Engineering, London South Bank University, London SE1 0AA, UK.
+

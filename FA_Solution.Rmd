@@ -1,0 +1,193 @@
+---
+title: "FA Solution"
+author: "Bert Gollnick"
+date: "October 2, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(psych))
+```
+
+# Introduction
+
+We will work on state anxiety data.
+
+# Data Understanding
+
+State Anxiety was measured two-three times in 11 studies at the Personality-Motivation-Cognition laboratory. Here are item responses for 11 studies (9 repeated twice, 2 repeated three times). In all studies, the first occasion was before a manipulation. In some studies, caffeine, or movies or incentives were then given to some of the participants before the second and third STAI was given. In addition, Trait measures are available and included in the tai data set (3032 subjects).
+
+# Data Preparation
+
+## Data Import
+
+First we load the data. The data is shipped with **psych** package. Assign the data (stored in "psych::tai") to an object called "tai".
+
+```{r}
+tai <- psych::tai
+```
+
+
+## Data Manipulation
+
+### Filtering
+
+Filter data, so that 
+
+- only study "XRAY" is included
+
+- variables "study", "time", and "id" are dropped
+
+Store the result in an object called "tai_mod".
+
+```{r}
+tai_mod <- tai %>% 
+  dplyr::filter(study == "XRAY") %>% 
+  select(-study, -time, -id)
+```
+
+
+### Missing Data Handling
+
+Find out if there are NA to be handled!
+
+```{r}
+summary(tai_mod)
+```
+
+Please filter your dataset, so that no NAs are included any more.
+
+
+```{r}
+tai_complete <- tai_mod %>% 
+  filter(complete.cases(.))
+```
+
+How many data is lost, if you only keep all available data? 
+
+```{r}
+"Four datasets are lost. We can live with that and only keep complete cases.
+"
+```
+
+# Factor Analysis
+
+## Factor Adequacy
+
+Please check based on Kaiser-Meyer-Olkin criterion if all variables are suitable for factor analysis.
+
+```{r}
+KMO(r = tai_complete)
+```
+
+How do you read the result? Are there unimportant variables? How suitable are the variables?
+
+```{r}
+"Results are for all variables in the order of 0.9, which is very high."
+```
+
+## No Rotation
+
+Perform a factor analysis and assign its result to an object called "tai_pca". Assume there are two latent factors (positive emotions, negative emotions).
+
+```{r}
+tai_fa <- factanal(x = tai_complete, 
+                     factors = 2, 
+                     scores = "regression", 
+                     rotation = "none")
+```
+
+- Extract the factor loadings, stored in first and second column of FA object, 
+
+- transform it to a dataframe and 
+
+- create an additional column "variable", which holds the rownames
+
+- Finally assign this to an object called "factor_loadings".
+
+```{r}
+factor_loadings <- tai_fa$loadings[, 1:2] %>% 
+  as.data.frame() %>% 
+  mutate(variable = rownames(.))
+```
+
+```{r}
+g <- ggplot(factor_loadings, aes(x = Factor1, 
+                                 y = Factor2, 
+                                 label = variable))
+g <- g + geom_point()
+g <- g + geom_text()
+g <- g + labs(x = "Factor 1", y = "Factor 2", title = "Factor Analysis")
+g
+```
+
+## Varimax Rotation
+
+Now create a new factor analysis, this time including rotation "varimax", extract the factor loadings, and visualise it using the code below.
+
+```{r}
+# FA calculation
+tai_fa <- factanal(x = tai_complete, 
+                     factors = 2, 
+                     scores = "regression", 
+                     rotation = "varimax")
+
+# Extraction of Factor Loadings
+factor_loadings <- tai_fa$loadings[, 1:2] %>% 
+  as.data.frame() %>% 
+  mutate(variable = rownames(.))
+```
+
+Use this code to visualise the result.
+
+```{r}
+g <- ggplot(factor_loadings, aes(x = Factor1, 
+                                 y = Factor2, 
+                                 label = variable))
+g <- g + geom_point()
+g <- g + geom_text()
+g <- g + labs(x = "Factor 1", y = "Factor 2", title = "Factor Analysis")
+g
+```
+
+What did change? 
+
+```{r}
+"The coordinate system was rotated, so that variables now load stronger on either of these variables."
+```
+
+## Number of Components
+
+Create the scree-plot. You need to extract the correlation matrix, which is stored in FA object as "correlation", and use it for visualisation with **scree.plot()** from psy package. 
+
+```{r}
+library(psy)
+tai_cor <- tai_fa$correlation
+scree.plot(tai_cor)
+```
+
+How many components would you select based on the methods you learned?
+
+Is our assumption of two reasonable? Please argue!
+
+```{r}
+"Yes, based on elbow method, two factors should be chosen."
+```
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Margarida G. M. S. Cardoso, margarida.cardoso '@' iscte.pt, ISCTE-IUL, Lisbon, Portugal

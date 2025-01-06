@@ -1,0 +1,150 @@
+---
+title: "LSTM: Univariate, Multi-Step Timeseries Prediction"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Introduction
+
+We will work with data from a sine wave and try to predict the next values.
+
+# Packages
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(keras)
+library(tfruns)
+```
+
+# Data Preparation
+
+We start very simple and try to predict the next values of a sine wave. We take 2 complete waves, where we choose the first for training and the second for testing.
+
+```{r}
+sine_wave <- tibble(x = seq(0, 6 * 3.14, by = 0.01),
+                    y = sin(x))
+sine_wave$class <- NA
+sine_wave$class[sine_wave$x < 2 *3.14] <- "train"
+sine_wave$class[sine_wave$x > 4 *3.14] <- "test"
+sine_wave$class[is.na(sine_wave$class)] <- "valid"
+```
+
+Let's take a look at our training and testing data.
+
+```{r}
+ggplot(sine_wave %>% filter(class == "train"), aes(x, y, col = class)) + 
+  geom_point()
+```
+
+Excursion on State Size and Data Shape:
+
+We use a state size of 5. Assume we have data that follows the sequence from 1 to n. This results in the training data
+
+1, 2, 3, 4, 5
+2, 3, 4, 5, 6
+...
+
+and these target data
+
+6, 7, 8, 9, 10
+7, 8, 9, 10, 11
+...
+
+## Train / Test Split
+
+As always we split our data into training, validation, and testing.
+
+```{r}
+train <- sine_wave %>% 
+  filter(class == "train")
+valid <- sine_wave %>% 
+  filter(class == "valid")
+test <- sine_wave %>% 
+  filter (class == "test")
+```
+
+The new data needs to have the shape:
+
+(number of observations, number of timesteps, prediction features)
+
+```{r}
+n_timesteps <- 10
+n_features <- 1
+```
+
+We write our own function for bringing the data into the right shape.
+
+```{r}
+lstm_reshape <- function(data, n_timesteps, n_features = 1, n_timesteps_pred = 1) {
+  n_obs <- length(data) - 2 * n_timesteps
+
+  # initialize result arrays
+  X_arr <- array(data = NA, dim = c(n_obs, n_timesteps, n_features))
+  y_arr <- array(data = NA, dim = c(n_obs, n_timesteps, 1))
+  for (i in 1: n_obs) {
+    X_arr[i, 1:n_timesteps, n_features] <-   data[i: (i+n_timesteps-1)]
+    y_arr[i, 1:n_timesteps, 1] <- data[(i+n_timesteps): (i+2*n_timesteps-1)]
+  }
+  #print(X_arr)
+  list(X_arr, y_arr)
+}
+```
+
+```{r}
+c(X_train, y_train) %<-% lstm_reshape(data = train$y, n_timesteps = 10, n_features = 1, n_timesteps_pred = 1)
+c(X_valid, y_valid) %<-% lstm_reshape(data = valid$y, n_timesteps = 10, n_features = 1, n_timesteps_pred = 1)
+c(X_test, y_test) %<-% lstm_reshape(data = test$y, n_timesteps = 10, n_features = 1, n_timesteps_pred = 1)
+```
+
+
+# Modeling
+
+we will define Flags, that hold the parameter values. Later, these will be passed to the model.
+
+```{r parameters}
+# code here
+```
+
+Here, the model is set up.
+
+```{r}
+# code here
+```
+
+The model is created and fitted.
+
+```{r}
+# code here
+```
+
+## Model Evaluation
+
+For the evaluation we create predictions based on test data.
+
+```{r}
+# code here
+```
+
+Finally, we create a plot for a specific point in time. You can change this point and see the result.
+
+```{r}
+start_point <- 100
+predicted_series <- tibble(x = test$x[start_point: (start_point+n_timesteps-1)], 
+                           y = predictions[start_point,1:n_timesteps,1])
+
+ggplot(test, aes(x, y)) + 
+  geom_point() +
+  geom_point(data = predicted_series, col = "red")
+```
+

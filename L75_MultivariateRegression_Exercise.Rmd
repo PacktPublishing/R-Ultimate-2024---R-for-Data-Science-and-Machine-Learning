@@ -1,0 +1,165 @@
+---
+title: "Multivariate Regression Exercise"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+# Data Understanding
+
+You will work on airfoil self noise prediction. Data comes from NASA airfoil testing. Airfoil blade sections were tested with regards to sound emission.
+
+These are the independent variables:
+
+- Frequency, in Hertzs. 
+
+- Angle of attack, in degrees. 
+
+- Chord length, in meters. 
+
+- Free-stream velocity, in meters per second. 
+
+- Suction side displacement thickness, in meters. 
+
+The target variable is 
+
+- Scaled sound pressure level, in decibels. 
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(corrplot))
+suppressPackageStartupMessages(library(caret))
+```
+
+
+# Data Preparation
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/airfoil_noise.txt"
+if (!file.exists(file_path)) {
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/00291/airfoil_self_noise.dat"
+  download.file(url = url, 
+                destfile = file_path)
+}
+```
+
+Import the data and assign it to object *airfoil_noise*:
+
+```{r}
+# add code here
+```
+
+
+Assign the right column names. Please use these names:
+
+frequency, aoa, chord_length, free_stream_vel, ss_displacement_thickness, spl)
+
+```{r}
+colnames(airfoil_noise) <- c("frequency", "aoa", "chord_length","free_stream_vel", "ss_displacement_thickness", "spl")
+```
+
+## Exploratory data analysis
+
+Create a correlation plot for the data to understand which variables are most valuable to predict sound pressure level.
+
+```{r}
+# add code here
+```
+
+Which two variables correlate most to target variable?
+
+```{r}
+# add code here
+```
+
+# Model1
+
+## Model Creation
+
+Create a multivariate linear regression model based on all independent variables.
+
+```{r}
+# add code here
+```
+
+## Model Performance
+
+Analyse model performance and get R**2 value:
+
+```{r}
+# create predictions
+
+# add code here
+
+# perform model performance
+
+# add code here
+```
+
+Does the model overfit?
+
+Create a visualisation of predicted and actual values.
+
+```{r}
+g <- ggplot(airfoil_noise, aes(x = spl, y = spl_pred))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", se = F)
+g <- g + labs(x = "Actual", y = "Predicted", title = "Correlation Plot")
+g <- g + theme_bw()
+g
+```
+
+
+# Model2
+
+## Model Creation
+
+Create a second model with only three independent variables. Which ones do you choose? 
+
+```{r}
+# add code here
+```
+
+## Model Performance
+
+Analyse model performance and get R**2 value:
+
+```{r}
+# create predictions
+
+# add code here
+
+# perform model performance
+
+# add code here
+```
+
+Did the model performance increase?
+
+```{r}
+# add code here
+```
+
+
+# Acknowledgement
+
+This dataset comes from UCI Machine Learning Repository. Here is more information on donor and creators of the data.
+
+Donor: 
+Dr Roberto Lopez 
+robertolopez '@' intelnics.com 
+Intelnics 
+
+Creators: 
+Thomas F. Brooks, D. Stuart Pope and Michael A. Marcolini 
+NASA

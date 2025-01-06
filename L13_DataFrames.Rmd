@@ -1,0 +1,70 @@
+---
+title: "Data Frames"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Introduction
+
+This tutorial will help you to understand
+
+- how to create a dataframe
+
+- how to access elements in a dataframe
+
+- how to delete columns
+
+## Dataframe Creation
+
+A dataframe is created either by importing data, or from hand.
+
+Nowadays tibbles replace dataframes. They are dataframes, but the print nicer, and somer other small improvements.
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+wind_oem <- data_frame(name = c("Vestas", "SGRE", "GE"),
+                       market_share = c(16, 15, 10))
+wind_oem
+```
+
+## Access Elements
+
+You can access columns with $ operator
+
+```{r}
+wind_oem$name
+```
+
+or with the second argument of [] operator
+
+```{r}
+wind_oem[, 1]
+```
+
+The same way you can access rows.
+
+```{r}
+wind_oem[1, ]
+```
+
+
+## Delete Columns
+
+If you want to delete columns you can assign NULL operator to the column.
+
+```{r}
+wind_oem$market_share <- NULL
+```
+

@@ -1,0 +1,40 @@
+---
+title: "Rmarkdown Introduction"
+author: "Bert Gollnick"
+date: "27 Dezember 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Word Processing
+
+You can format text in **bold** or *italic*.
+
+This is just text: exp(1).
+
+# Code Chunks
+
+In a code chunk you can calculate the result.
+
+```{r}
+exp(1)
+```
+
+# Plots
+
+```{r}
+# install.packages("plotly")  # run this, if you did not install plotly package before.
+
+library(plotly)
+data("volcano")
+plot_ly(z = volcano, type = "surface")
+```
+

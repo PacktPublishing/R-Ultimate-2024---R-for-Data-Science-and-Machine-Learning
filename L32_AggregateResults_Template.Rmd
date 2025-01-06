@@ -1,0 +1,44 @@
+---
+title: "Aggregating Results"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+# Data Preparation
+
+```{r}
+data("population")
+population
+```
+
+We use the dataset "population", which shows the population for `r unique(population$country) %>% length()` countries and the period from `r min(population$year)` to `r max(population$year)`.
+
+Data is stored in a tidy format. It looks like this.
+
+```{r}
+population %>% head()
+```
+
+# Data Aggregation
+
+We want to calculate the min, max, and increase of population for each country.
+
+At first the data is grouped for the category that should be used for grouping. Then in the summarise()
+function the logic is described, which defines new columns to be created and how these should be calculated.
+ 
+```{r}
+# code here
+```
+

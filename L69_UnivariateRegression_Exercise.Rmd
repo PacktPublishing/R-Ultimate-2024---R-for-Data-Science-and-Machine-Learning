@@ -1,0 +1,132 @@
+---
+title: "Univariate Regression: Exercise"
+author: "Bert Gollnick"
+date: "October 25, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(lava))  # includes data
+```
+
+# Data Understanding
+
+In this tutorial you will take a look at measurements of Hubble (the telescope). Besides taking beautiful pictures, it measured speed and distance of Super-Novae. Similar data was used in 1929 by Hubble (the person) and he found out that there is a linear relationship.
+
+He discovered that galaxies appear to move away. This can be visualised with red-shift of spectral lines. This observation was the first indication that the universe expands.
+
+You will create a linear model based on observations and create predictions.
+
+# Data Preparation
+
+## Data Import
+
+You import the data with **data()**. The data is called "hubble."
+
+```{r}
+# put your code here
+```
+
+Show the first observations of the dataframe.
+
+```{r}
+# put your code here
+```
+
+It holds Velocity (v) and distance (D) measures of 36 Type Ia super-novae from the Hubble Space Telescope.
+
+The data is visualised.
+
+```{r}
+g <- ggplot(hubble, aes(v, D))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", se = F)
+g
+```
+
+We can clearly observe the linear relationship of the data.
+
+# Modeling
+
+You will create a linear model. Dependent variable is "D", independent variable is "v".
+
+What are the values of parameters for intercept and slope for "v"?
+
+```{r}
+# put your code here
+```
+
+Calculate adjusted R squared.
+
+```{r}
+# put your code here
+```
+
+Is there a high correlation between D and v?
+
+```{r}
+# put your code here
+```
+
+# Predictions
+
+A new dataframe is created, that covers a broad range of speeds.
+
+```{r}
+new_data <- data.frame(v = seq(0, 30000, 1000))
+```
+
+Add to the dataframe "new_data" a column "D_pred", that hold predictions of "D", based on the model you created.
+
+```{r}
+# put your code here
+```
+
+Now we can compare actual data and plot our linear regression line on top.
+
+```{r}
+g <- ggplot(new_data, aes(v, D_pred))
+g <- g + geom_line(color = "blue", size = 2)
+g <- g + geom_point(data = hubble, aes(v, D))
+g <- g + theme_bw()
+g <- g + xlab ("Speed v [km/s]")
+g <- g + ylab ("Distance D [MPc]")
+g <- g + ggtitle("Hubble Super-Novae Type Ia Measurements and Predictions")
+g
+```
+
+Our linear regression line perfectly matches the one shown in the previous plot. So ggplot uses the same calculation for **geom_smooth()**.
+
+# Bonus Question: Hubble Constant
+
+Hubble constant (H0) is one of the most important values in cosmology. 
+
+$$H_0 = \frac{v}{D}$$
+
+```{r}
+# put your code here
+```
+
+You can compare this to most recent observed values, as shown in this [Wikipedia article](https://en.wikipedia.org/wiki/Hubble%27s_law).
+
+# Conclusion
+
+You learned to create a linear (and univariate) model, which is the most basic model you can create. But if the basics are understood, more complicated models can be created with little effort.
+
+# Acknowledgement
+
+We thank the author of the data for providing it:
+
+Freedman, W. L., et al. 2001, AstroPhysicalJournal, 553, 47.

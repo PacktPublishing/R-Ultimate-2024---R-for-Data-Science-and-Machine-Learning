@@ -1,0 +1,218 @@
+---
+title: "kmeans Clustering"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(stats))
+suppressPackageStartupMessages(library(readr))
+```
+
+# Data Understanding
+
+We will work on a dataset on Zoo animals. We want to cluster the animals by their attributes.
+
+More information on the data can be found [here](https://archive.ics.uci.edu/ml/datasets/zoo)
+
+We work with these attributes:
+
+1. animal name
+2. hair
+3. feathers
+4. eggs
+5. milk
+6. airborne
+7. aquatic
+8. predator
+9. toothed
+10. backbone
+11. breathes
+12. venomous
+13. fins
+14. legs
+15. tail
+16. domestic
+17. catsize
+18. type
+
+Our target variable "type" has 7 classes with integer values of 1 to 7.
+
+These numbers represent these groups:
+
+1 -- (41) aardvark, antelope, bear, boar, buffalo, calf, cavy, cheetah, deer, dolphin, elephant, fruitbat, giraffe, girl, goat, gorilla, hamster, hare, leopard, lion, lynx, mink, mole, mongoose, opossum, oryx, platypus, polecat, pony, porpoise, puma, pussycat, raccoon, reindeer, seal, sealion, squirrel, vampire, vole, wallaby,wolf 
+2 -- (20) chicken, crow, dove, duck, flamingo, gull, hawk, kiwi, lark, ostrich, parakeet, penguin, pheasant, rhea, skimmer, skua, sparrow, swan, vulture, wren 
+3 -- (5) pitviper, seasnake, slowworm, tortoise, tuatara 
+4 -- (13) bass, carp, catfish, chub, dogfish, haddock, herring, pike, piranha, seahorse, sole, stingray, tuna 
+5 -- (4) frog, frog, newt, toad 
+6 -- (8) flea, gnat, honeybee, housefly, ladybird, moth, termite, wasp 
+7 -- (10) clam, crab, crayfish, lobster, octopus, scorpion, seawasp, slug, starfish, worm
+
+# Data Preparation
+
+## Data Import
+
+```{r}
+# if file does not exist, download it first
+file_path <- "./data/zoo.csv"
+if (!file.exists(file_path)) { 
+  dir.create("./data")
+  url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/zoo/zoo.data"
+  download.file(url = url, 
+                destfile = file_path)
+}
+
+zoo_raw <- read.csv(file = file_path)
+```
+
+## Setting Column Names
+
+```{r}
+colnames(zoo_raw) <- c("animal_name", "hair", "feathers", "eggs", "milk", "airborne", "aquatic", "predator", "toothed", "backbone", "breathes",    "venomous",  "fins","legs", "tail", "domestic", "catsize", "class_type" )
+```
+
+## Data Manipulation
+
+```{r}
+summary(zoo_raw)
+```
+
+There are no NA's that need to be handled. There are 17 attributes and one class attribute.
+
+There are 101 observations which belong to these classes.
+
+```{r}
+table(zoo_raw$class_type)
+```
+
+
+
+```{r}
+file_class <- "./data/class.csv"
+class_names <- read_csv(file_class) %>% as_tibble()
+class_names %>% 
+  dplyr::select(Class_Number, Class_Type)
+```
+
+In clustering a distance is measured. Due to this, it is important to apply scaling to the data.
+
+```{r}
+zoo_scaled <- zoo_raw %>% 
+  select(-animal_name, -class_type) %>% 
+  scale
+zoo_scaled %>% summary
+```
+
+# Model
+
+## Number of Clusters
+
+In this we have the domain knowledge and know that there are seven classes. Assume we don't know this. We want to find out if the Elbow method guides us to the same conclusion.
+
+```{r}
+set.seed(123)
+k_max <- 15
+
+within_cluster_sum_squares <- tibble(k = 1:k_max,
+                                     wcss = NA)
+
+for (i in within_cluster_sum_squares$k) {
+  within_cluster_sum_squares$wcss[i] <- kmeans(x = zoo_scaled,
+                                               centers = i,
+                                               nstart = 10)$tot.withinss
+}
+```
+
+We visualise the results with **ggplot()**.
+
+```{r}
+g <- ggplot(within_cluster_sum_squares, aes(k, wcss))
+g <- g + geom_line()
+g <- g + scale_x_continuous(breaks = 1:k_max)
+g <- g + labs(title = "Elbow Method\nfor Determining optimum Cluster Number")
+g <- g + theme_bw()
+g
+```
+
+Based on this method, four clusters would be the best bet. We stick to 7 due to our domain model.
+
+It would actually interesting to see which classes would be left out to conclude with four rather than seven.
+
+## Model Creation
+
+```{r}
+mod_cluster <- kmeans(x = zoo_scaled, centers = 7)
+```
+
+x specifies the data. k specifies the number of clusters.
+
+## Model Evaluation
+
+```{r}
+zoo_raw$cluster <- mod_cluster$cluster
+```
+
+```{r}
+g <- ggplot(zoo_raw, aes(y = cluster, 
+                         x = class_type, 
+                         col = factor(class_type)))
+g <- g + geom_jitter()
+g <- g + scale_x_continuous(breaks = 1:7)
+g <- g + scale_y_continuous(breaks = 1:7)
+g <- g + labs(x = "Actual Classes", 
+              y = "kmeans Cluster", 
+              title = "Actual Classes and kmeans Clusters")
+g <- g + theme_bw()
+g <- g + scale_color_discrete(name = "Actual Classes")
+g
+```
+The actual numbers of the classes are irrelevant. It is only relevant, that the kmeans cluster perfectly matches one and only one actual class. 
+
+We see, it works perfect for Actual Class = 2. Here all points are covered correctly. Also for other classes it works very well.
+
+We can also see it in the table view.
+
+```{r}
+table(pred = zoo_raw$cluster, actual = zoo_raw$class_type)
+```
+
+It works perfectly for classes 2, 4, and 6. For the other classes there are small errors.
+
+Let's investigate some of the misclassifications.
+
+```{r}
+# wrongly predicted values
+zoo_raw$animal_name[zoo_raw$class_type == 3 & zoo_raw$cluster == 5]
+
+# correct class - Birds
+zoo_raw$animal_name[zoo_raw$class_type == 2]
+
+```
+
+# Acknowledgement
+
+Thanks to the author of this paper for providing information on the dataset.
+
+Creator: 
+
+Richard Forsyth 
+
+Donor: 
+
+Richard S. Forsyth 
+8 Grosvenor Avenue 
+Mapperley Park 
+Nottingham NG3 5DX 
+0602-621676

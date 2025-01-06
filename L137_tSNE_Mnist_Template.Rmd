@@ -1,0 +1,94 @@
+---
+title: "t-SNE in Comparison to PCA for Handwritten Digits."
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Introduction
+
+```{r}
+library(Rtsne)
+library(keras)
+library(tidyverse)
+```
+
+We will work with Mnist dataset. This is purely because it is highly dimensional (784 dimensions) and shows a very good result for t-SNE.
+
+More information on the data can be found [here](http://yann.lecun.com/exdb/mnist/).
+
+# Data Preparation
+
+First, we import the data.
+
+```{r}
+x_train <- read.csv("./data/train.csv", sep = ",")
+```
+
+Now we separate dependent and independent variables.
+
+```{r}
+y_train <- x_train$label
+x_train <- x_train %>% 
+  select(-label)
+```
+
+## Visualisation of a digit
+
+We want to check that we are dealing with digits.
+
+```{r}
+# code here
+```
+
+
+# t-SNE Model
+
+A t-SNE model is created. The function **Rtsne()** is applied.
+
+```{r}
+# code here
+```
+
+Now we can create the results plot.
+
+```{r}
+ggplot(result_tsne, aes(x=V1, y=V2, col = as.factor(label))) +  
+  geom_point(size=1, alpha = 0.5) +
+  labs(x = "", y = "", title = "t-SNE") + 
+  theme_bw() + 
+  scale_color_discrete(name = "Label")
+```
+
+All classes are nicely separated.
+
+# PCA Model
+
+A PCA model is created with **prcomp()**.
+
+```{r}
+pca_model <- prcomp(x = x_train, center = T, scale. = F)
+
+result_pca <- tibble(PC1 = pca_model$x[, 1],
+                     PC2 = pca_model$x[, 2],
+                     label = y_train)
+```
+
+We can now visualise the result.
+
+```{r}
+ggplot(result_pca, aes(x=PC1, y=PC2, col = factor(label))) +  
+  geom_point(size=1, alpha = 0.5) +
+  labs(x = "", y = "", title = "PCA") + 
+  theme_bw() + 
+  scale_color_discrete(name = "Label")
+```
+
+The labels are overlapping a lot. They are not as nicely separated as for t-SNE.

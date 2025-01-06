@@ -1,0 +1,99 @@
+---
+title: "Using Pretrained Models"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    number_sections: true
+    code_folding: hide
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(tidyverse)  # data plotting and manipulation
+library(keras)  # deep learning
+library(jpeg)  # image processing
+library(OpenImageR)
+```
+
+# Data Preparation
+
+## Loading a pretrained model
+
+At first we load the trained model.
+
+```{r}
+# code here
+```
+
+## Prepare an image
+
+We will use my profile image and an image of an elephant (you can exchange it and use an own image).
+
+This function is used to plot the image.
+
+```{r}
+plot_jpeg = function(path, add=FALSE)
+{
+  jpg = jpeg::readJPEG(path, native=T) # read the file
+  res = dim(jpg)[2:1] # get the resolution, [x, y]
+  if (!add) # initialize an empty plot area if add==FALSE
+    plot(1,1,xlim=c(1,res[1]),ylim=c(1,res[2]),asp=1,type='n',xaxs='i',yaxs='i',xaxt='n',yaxt='n',xlab='',ylab='',bty='n')
+  rasterImage(jpg,1,1,res[1],res[2])
+}
+```
+
+Now we define which photo to use.
+
+```{r}
+image_file <- "./data/elephant.jpg"
+
+plot_jpeg(image_file)
+```
+
+Now we need to rescale it and import it to an array. We can make use of keras functions for this purpose.
+
+```{r}
+# code here
+```
+
+# Model Predictions
+
+```{r}
+# code here
+```
+
+## Get Class Labels
+
+```{r}
+class_labels <- read.table("./data/imagenet1000_clsidx_to_labels.txt", sep = ":") %>% 
+  select(-V1) %>% 
+  rename(label = V2)
+
+# code here
+```
+
+We used an image of an indian elephant and received the right prediction.
+
+Now let's see what other predictions were.
+
+```{r}
+class_labels$preds <- predictions[1, ]
+
+class_labels %>% 
+  arrange(desc(preds)) %>% 
+  top_n(5) %>% 
+  mutate(label = factor(x = label, label)) %>% 
+  ggplot(data = ., aes(x = label,
+                       y = preds)) + 
+  geom_col() + 
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+

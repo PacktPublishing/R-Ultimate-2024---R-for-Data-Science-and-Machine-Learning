@@ -1,0 +1,145 @@
+---
+title: "Outlier Detection"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(knitr)
+```
+
+
+# Introduction
+
+We will work on iris dataset. We load it with data().
+
+```{r}
+data(iris)
+```
+
+We want to detect outliers for one specific variable (here: “Petal.Length”). Let’s visualise the data with ggplot(). 
+
+The graph shows a boxplot for each grouping (here: “Species”). A boxplot is a helpful visualisation for univariate distributions. If you need some refreshment on how to read it, you find a link at the end of this article.
+
+```{r}
+g <- ggplot(iris, aes(Species, Petal.Length))
+g <- g + geom_boxplot()
+g <- g + labs(title="Boxplot for Iris Dataset", xlab = "Species", ylab = "Petal Length [cm]")
+g
+```
+
+The dots represent outliers.
+
+- Outliers are defined as values that are 3 times IQR above third quantile or 3 times IQR below first quantile.
+- Suspected outliers are 1.5 times IQR (inter quartile range) above third quantile or 1.5 times IQR below first quantile.
+
+In other sources you find the naming mild (1.5 IQR) and extreme (3 IQR) outliers.
+
+# Z-Score Outlier Calculation
+
+The calculation is straightforward.
+
+1. We calculate first quantile (Q1) and third quantile (Q3).
+
+2. With this we can calculate IQR (= Q3 – Q1).
+
+3. Now we calculate upper and lower limits according to shown definition.
+
+```{r}
+# code here
+```
+
+This information now is applied to our dataset. We will first join it with “iris”, before we perform some simple comparisons to find outliers.
+
+For the joining we use left_join() from dplyr package. We a nicer view we remove variables that are not needed any more with select(), and take a look at the head of this dataset.
+
+```{r}
+# code here
+```
+
+```{r}
+# code here
+```
+
+Outliers are studied.
+
+```{r}
+iris %>% 
+  filter(PetalLengthOutlier == "outlier") %>% 
+  kable()
+```
+
+You see there are four outliers for species setosa, and one outlier for versicolor. This are the same points that we have seen in our ggplot boxplot.
+
+It is up to you to perform the calculation for extreme outliers (3 times IQR).
+
+# Dbscan Outlier Detection
+
+```{r}
+# install.packages("dbscan")
+library(dbscan)
+```
+
+Two parameters need to be specified: epsilon and min_points
+
+## Optimal value for epsilon
+
+Average of distances of each point to its k nearest neighbors is calculated. k (corresponds to min_points) and is specified by user.
+
+It is aimed to determine the knee - which represents optimal epsilon parameter.
+
+```{r}
+# code here
+```
+ 
+ For epsilon 0.4 seems to be a reasonable choice.
+ 
+ Now dbscan can be started.
+ 
+```{r}
+# code here
+```
+
+## Clusters
+ 
+```{r}
+# code here
+```
+ 
+We see there are four clusters recognized.
+
+## Outliers Plotting
+
+In total there are 32 outliers.
+ 
+```{r}
+# code here
+```
+ 
+```{r}
+# code here
+```
+ 
+```{r}
+iris_mod <- iris %>% 
+  gather(key = "variable", value = "value", 1:4)
+g <- ggplot (iris_mod, aes(x=Species, y = value, col = cluster))
+g <- g + facet_grid(. ~ variable)
+g <- g + geom_jitter()
+g
+```
+
+
+ 

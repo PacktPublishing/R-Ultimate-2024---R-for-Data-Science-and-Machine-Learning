@@ -1,0 +1,152 @@
+---
+title: "Data Visualisation with ggplot2"
+author: "Bert Gollnick"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
+```
+
+# Packages
+
+```{r}
+library(ggplot2)
+library(dplyr)
+```
+
+# Data Preparation
+
+```{r}
+data("diamonds")
+diamonds %>% glimpse()
+```
+
+# One Variable
+
+## Discrete 
+
+```{r}
+diamonds %>% 
+  ggplot(aes(cut)) + 
+  geom_bar()
+```
+
+## Continuous
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  geom_density()
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  geom_area(stat = "bin")
+```
+
+```{r}
+diamonds %>% 
+  sample_n(100) %>% 
+  ggplot(aes(x = table)) + 
+  geom_dotplot()
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price)) + 
+  geom_histogram()
+```
+
+# Two Variables
+
+## Continuous X, Continous Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, y = y)) + 
+  geom_point()
+```
+
+## Continuous X, Discrete Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = price, y = clarity)) + 
+  geom_bin2d()
+```
+
+
+## Discrete X, Continuous Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  geom_jitter(alpha = .2)
+```
+
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  geom_violin()
+```
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = price)) + 
+  geom_boxplot()
+```
+
+## Discrete X, Discrete Y
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = clarity, y = cut)) + 
+  geom_jitter(alpha = .2)
+```
+
+# Further Dimensions
+
+## Color
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, y = y, col = price)) + 
+  geom_point(alpha = .2) + 
+  scale_color_continuous(low = "green", high = "red")
+
+```
+
+## Facets
+
+```{r}
+diamonds %>% 
+  ggplot(aes(x = x, 
+             y = y, 
+             col = price)) + 
+  geom_point(alpha = .2) + 
+  facet_grid(cut ~ color) +
+  scale_color_continuous(low = "green", high = "red")
+```
+
+## Size 
+
+```{r}
+diamonds %>% 
+  ggplot(data = ., 
+         aes(x = x, 
+             y = y, 
+             col = price,
+             size = table)) + 
+  geom_point(alpha = .2) + 
+  facet_grid(cut ~ color) +
+  scale_color_continuous(low = "green", 
+                         high = "red")
+```

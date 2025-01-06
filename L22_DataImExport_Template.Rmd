@@ -1,0 +1,134 @@
+---
+title: "Data Im- and Export"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Nearly all common formats are supported. Some examples are given. Some very common formats are described here. If your file format is not shown, search for it in the internet and it is very likely that there is a package dealing with it.
+
+# Import
+
+## CSV
+
+CSV is supported natively - without any extra packages, because it is part of the *base* package.
+
+```{r}
+# code here
+```
+
+## Excel
+
+For Excel you need a separate package. There are many. I usually use *readxl*. It has many parameters for **sheet**, **range**, **skip**ing lines, and many more.
+
+```{r}
+library(readxl)
+# code here
+```
+
+## JSON
+
+Java Script Object Notation (JSON) is a very famous format for unstructured data. Of course it can also store structured data like in our case. For this you need the package *jsonlite*.
+
+```{r}
+library(jsonlite)
+# code here
+```
+
+## SPSS
+
+SPSS is a statistical program with its own file format. With package *foreign* SPSS data can be im- and exported.
+
+```{r}
+library(foreign)
+# code here
+```
+
+## PDF
+
+In case of data analysis we are usually interested in extracting tables for PDF documents. You can use package *tabulizer*.
+
+This package needs to be installed differently, because it is hosted on Github.
+
+```{r}
+# if (!require("ghit")) {
+#     install.packages("ghit")
+# }
+# on 64-bit Windows
+# ghit::install_github(c("ropensci/tabulizerjars", "ropensci/tabulizer"), INSTALL_opts = "--no-multiarch")
+
+#library(tabulizer)
+```
+
+For each of 22 pages a list item is created. These have to be post-processed, but still this is a handy way to scrape data from PDF documents.
+
+Also text can be extracted from PDF documents, but this is not shown here.
+
+```{r}
+# code here
+```
+
+## RDA
+
+RDA is a native R format, which provides compression. RDA saves the object names and can store more than just one object.
+
+```{r}
+# code here
+```
+
+## RDS
+
+RDS is the new native R format. RDS does not store the object name and can only contain one object. It has a slightly better compression rate compared to RDA.
+
+```{r}
+# code here
+```
+
+# Export
+
+In the same way and usually with the same packages used for import, we can export data in manifold formats.
+
+## CSV
+
+For CSV export we don't need any additional packages, but instead can use *base* functionality.
+
+```{r}
+# code here
+```
+
+## JSON
+
+Same as for import we use *jsonlite* for exporting data in JSON format.
+
+```{r}
+library(jsonlite)
+# code here
+
+```
+
+## SPSS
+
+Package *foreign* is used to export data to SPSS format.
+
+```{r}
+library(foreign)
+# code here
+```
+
+## RDA and RDS
+
+RDA and RDS are native R data formats, which store data compressed.
+
+RDA saves the object names and can store more than just one object. RDS does not store the object name and can only contain one object. RDS also has a slightly better compression.
+
+```{r}
+# code here
+```
+
